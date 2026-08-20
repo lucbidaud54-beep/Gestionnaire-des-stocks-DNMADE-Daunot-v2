@@ -1,0 +1,3771 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Gestionnaire des stocks DNMADE Daunot</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+  /* ─── DESIGN TOKENS ─── */
+  :root {
+    --bg: #F7F8FA;
+    --surface: #FFFFFF;
+    --surface2: #EEF1F7;
+    --border: #D8DDE8;
+    --accent-son: #3B6FCA;
+    --accent-lum: #E8A020;
+    --accent-vid: #2AA87E;
+    --accent: #3B6FCA;
+    --accent-light: #E8EEFB;
+    --text: #1A1D23;
+    --text2: #5A6070;
+    --text3: #8A90A0;
+    --danger: #D94040;
+    --success: #2AA87E;
+    --radius: 10px;
+    --radius-sm: 6px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.07);
+    --shadow-lg: 0 4px 24px rgba(0,0,0,0.12);
+    --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    --header-h: 52px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: var(--bg); font-family: var(--font); color: var(--text); font-size: 14px; -webkit-text-size-adjust: 100%; }
+  body { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+
+  /* ─── APP SHELL ─── */
+  #app { min-height: 100vh; display: flex; flex-direction: column; }
+  .app-header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 16px;
+    height: var(--header-h);
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0;
+    box-shadow: var(--shadow);
+    z-index: 10;
+    position: sticky; top: 0;
+  }
+  .app-header h1 { font-size: 13px; font-weight: 700; letter-spacing: .3px; color: var(--text); }
+  .app-header .badge {
+    font-size: 10px; font-weight: 600; padding: 2px 8px;
+    border-radius: 20px; background: var(--accent-light); color: var(--accent);
+    text-transform: uppercase; letter-spacing: .5px;
+  }
+  .tab-bar {
+    display: flex; background: var(--surface2); border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    position: sticky; top: var(--header-h); z-index: 9;
+  }
+  .tab-btn {
+    flex: 1; padding: 9px 4px; font-size: 11px; font-weight: 600; letter-spacing: .3px;
+    text-transform: uppercase; border: none; background: transparent; cursor: pointer;
+    color: var(--text3); border-bottom: 2px solid transparent; transition: all .2s;
+  }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); background: var(--surface); }
+
+  /* ─── SCREENS ─── */
+  .screen { display: none; flex-direction: column; }
+  .screen.active { display: flex; }
+
+  /* ─── FORM ELEMENTS ─── */
+  label { font-size: 11px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .4px; display: block; margin-bottom: 3px; }
+  select, input[type="text"], input[type="date"], input[type="password"] {
+    width: 100%; padding: 7px 10px; border: 1px solid var(--border);
+    border-radius: var(--radius-sm); font-size: 13px; font-family: var(--font);
+    background: var(--surface); color: var(--text); outline: none; transition: border-color .2s;
+    appearance: auto;
+  }
+  select:focus, input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
+
+  /* ─── BUTTONS ─── */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 9px 16px; border-radius: var(--radius-sm); font-size: 13px;
+    font-weight: 600; border: none; cursor: pointer; transition: all .15s; text-decoration: none;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { filter: brightness(1.1); }
+  .btn-success { background: var(--success); color: #fff; }
+  .btn-outline { background: transparent; color: var(--accent); border: 1.5px solid var(--accent); }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+  .btn-block { width: 100%; }
+  .btn-print {
+    background: linear-gradient(135deg, #1A1D23, #3B6FCA);
+    color: #fff; font-size: 13px; font-weight: 700; letter-spacing: .5px;
+    padding: 11px; border-radius: var(--radius-sm);
+    border: none; cursor: pointer; width: 100%; transition: opacity .2s;
+  }
+  .btn-print:hover { opacity: .9; }
+
+  /* ─── CHECK-LIST RETOUR ─── */
+  .btn-checklist {
+    background: linear-gradient(135deg, #1A6644, var(--success));
+    color: #fff; font-size: 13px; font-weight: 700; letter-spacing: .5px;
+    padding: 11px; border-radius: var(--radius-sm);
+    border: none; cursor: pointer; width: 100%; transition: opacity .2s;
+  }
+  .btn-checklist:hover:not(:disabled) { opacity: .9; }
+  .btn-checklist:disabled {
+    background: var(--surface2); color: var(--text3);
+    cursor: not-allowed; font-weight: 600;
+  }
+
+  /* ─── GÉRER LE STOCK ─── */
+  .btn-manage {
+    background: linear-gradient(135deg, #5A3FA0, #8B5CF6);
+    color: #fff; font-size: 13px; font-weight: 700; letter-spacing: .5px;
+    padding: 11px; border-radius: var(--radius-sm);
+    border: none; cursor: pointer; width: 100%; transition: opacity .2s;
+  }
+  .btn-manage:hover { opacity: .9; }
+
+  /* ─── ALERTES RETARD ─── */
+  .btn-alerte {
+    background: linear-gradient(135deg, #A0390A, #E8570A);
+    color: #fff; font-size: 13px; font-weight: 700; letter-spacing: .5px;
+    padding: 11px; border-radius: var(--radius-sm);
+    border: none; cursor: pointer; width: 100%; transition: opacity .2s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .btn-alerte:hover { opacity: .9; }
+  .badge-retard-count {
+    background: #fff; color: #E8570A; font-size: 11px; font-weight: 800;
+    padding: 1px 7px; border-radius: 20px; min-width: 20px; text-align: center;
+  }
+  /* Badge rouge sur les cartes de demandes en retard */
+  .req-item.en-retard { border-color: #E8570A !important; }
+  .req-item.en-retard .ri-title::after {
+    content: " ⏱"; color: #E8570A; font-size: 12px;
+  }
+  .retard-chip {
+    font-size: 10px; font-weight: 700; padding: 1px 6px;
+    border-radius: 20px; background: #FEECEC; color: #D94040;
+    display: inline-block; margin-top: 2px;
+  }
+
+  /* ─── MODAL STOCK ─── */
+  .modal-box-wide {
+    background: var(--surface); border-radius: var(--radius); padding: 20px 18px;
+    width: 100%; max-width: 480px; box-shadow: var(--shadow-lg);
+    max-height: 90vh; overflow-y: auto;
+  }
+  .stock-manage-tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+  .smt-btn {
+    flex: 1; padding: 7px 4px; font-size: 12px; font-weight: 700;
+    border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+    background: var(--surface2); color: var(--text2); cursor: pointer; transition: all .15s;
+  }
+  .smt-btn.active { background: #EDE9FE; color: #5A3FA0; border-color: #8B5CF6; }
+  .manage-panel { display: none; }
+  .manage-panel.active { display: block; }
+  .ref-manage-item {
+    display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+    border-radius: var(--radius-sm); border: 1.5px solid var(--border);
+    margin-bottom: 6px; background: var(--surface); transition: all .15s;
+  }
+  .ref-manage-item:hover { border-color: #8B5CF6; background: #EDE9FE22; }
+  .rmi-body { flex: 1; min-width: 0; }
+  .rmi-ref  { font-weight: 700; font-size: 12px; }
+  .rmi-desc { font-size: 11px; color: var(--text3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rmi-actions { display: flex; gap: 4px; flex-shrink: 0; }
+  .btn-edit { background: #EDE9FE; color: #5A3FA0; border: none; border-radius: var(--radius-sm); padding: 4px 8px; font-size: 11px; font-weight: 700; cursor: pointer; }
+  .btn-del  { background: #FEECEC; color: var(--danger); border: none; border-radius: var(--radius-sm); padding: 4px 8px; font-size: 11px; font-weight: 700; cursor: pointer; }
+  .form-group { margin-bottom: 10px; }
+  .form-group label { margin-bottom: 4px; }
+
+  /* ─── GESTION UTILISATEURS ─── */
+  .user-manage-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 10px; border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border); margin-bottom: 6px;
+    background: var(--surface);
+  }
+  .user-manage-item .umi-name { font-weight: 600; font-size: 13px; }
+  .btn-del-user {
+    background: #FEECEC; color: var(--danger);
+    border: none; border-radius: var(--radius-sm);
+    padding: 4px 10px; font-size: 11px; font-weight: 700; cursor: pointer;
+  }
+  .btn-del-user:hover { background: var(--danger); color: #fff; }
+
+  /* ─── FICHE UTILISATEUR ─── */
+  .btn-fiche {
+    background: linear-gradient(135deg, #1A5CA0, #2AA87E);
+    color: #fff; font-size: 13px; font-weight: 700; letter-spacing: .5px;
+    padding: 11px; border-radius: var(--radius-sm);
+    border: none; cursor: pointer; width: 100%; transition: opacity .2s;
+  }
+  .btn-fiche:hover { opacity: .9; }
+  .stat-cards { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+  .stat-card {
+    background: var(--surface2); border-radius: var(--radius-sm);
+    padding: 10px 8px; text-align: center; border: 1.5px solid var(--border);
+  }
+  .stat-card .sc-val { font-size: 22px; font-weight: 800; line-height: 1.1; }
+  .stat-card .sc-lbl { font-size: 10px; color: var(--text3); font-weight: 600; text-transform: uppercase; letter-spacing: .4px; margin-top: 2px; }
+  .sc-emprunts { color: var(--accent); }
+  .sc-encours  { color: var(--accent-lum); }
+  .sc-retards  { color: var(--danger); }
+  .fiche-section { margin-bottom: 14px; }
+  .fiche-section-title { font-size: 11px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid var(--border); }
+  .fiche-demande-item {
+    padding: 8px 10px; border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border); margin-bottom: 6px;
+    background: var(--surface); font-size: 12px;
+  }
+  .fiche-demande-item.retarde { border-color: var(--danger); background: #FEECEC22; }
+  .fiche-demande-item.retourne { border-color: var(--success); background: #E3F5EF44; }
+  .fdi-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  .fdi-title { font-weight: 700; }
+  .fdi-refs { font-size: 11px; color: var(--text3); margin-top: 3px; }
+  .fiche-empty { font-size: 12px; color: var(--text3); padding: 8px 0; }
+
+  /* ─── MOT DE PASSE ─── */
+  .pwd-strength { height: 5px; border-radius: 3px; margin-top: 5px; transition: all .3s; background: var(--border); }
+  .pwd-strength.faible  { background: var(--danger);  width: 33%; }
+  .pwd-strength.moyen   { background: var(--accent-lum); width: 66%; }
+  .pwd-strength.fort    { background: var(--success); width: 100%; }
+  .pwd-hint { font-size: 11px; margin-top: 3px; }
+
+  /* ─── JOURNAL ─── */
+  .btn-journal {
+    background: linear-gradient(135deg, #2D3A5A, #4A5A8A);
+    color: #fff; font-size: 13px; font-weight: 700; letter-spacing: .5px;
+    padding: 11px; border-radius: var(--radius-sm);
+    border: none; cursor: pointer; width: 100%; transition: opacity .2s;
+  }
+  .btn-journal:hover { opacity: .9; }
+  .journal-item {
+    padding: 8px 10px; border-radius: var(--radius-sm);
+    border-left: 3px solid var(--border); margin-bottom: 6px;
+    background: var(--surface); font-size: 12px;
+  }
+  .journal-item.connexion   { border-color: var(--success); }
+  .journal-item.deconnexion { border-color: var(--text3); }
+  .journal-item.mdp         { border-color: var(--danger); }
+  .journal-item.action      { border-color: var(--accent); }
+  .ji-header { display: flex; justify-content: space-between; align-items: center; }
+  .ji-action { font-weight: 700; font-size: 12px; }
+  .ji-time   { font-size: 10px; color: var(--text3); }
+  .ji-detail { font-size: 11px; color: var(--text2); margin-top: 2px; }
+  .ji-admin  { font-size: 10px; color: var(--text3); margin-top: 1px; }
+  .checklist-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 10px; border-radius: var(--radius-sm);
+    margin-bottom: 6px; border: 1.5px solid var(--border);
+    background: var(--surface); transition: all .2s; cursor: pointer;
+  }
+  .checklist-item:hover { border-color: var(--success); background: #E3F5EF; }
+  .checklist-item.checked {
+    border-color: var(--success); background: #E3F5EF;
+  }
+  .checklist-item.checked .ci-ref { text-decoration: line-through; color: var(--text3); }
+  .checklist-item input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; accent-color: var(--success); flex-shrink: 0; }
+  .ci-body { flex: 1; min-width: 0; }
+  .ci-ref { font-weight: 700; font-size: 12px; }
+  .ci-desc { font-size: 11px; color: var(--text3); margin-top: 1px; }
+  .ci-qte { font-weight: 700; color: var(--accent); font-size: 13px; white-space: nowrap; }
+  .ci-status { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 20px; }
+  .ci-ok { background: #E3F5EF; color: var(--success); }
+  .ci-missing { background: #FEECEC; color: var(--danger); }
+
+  /* ─── QTY CONTROL ─── */
+  .qty-ctrl { display: flex; align-items: center; gap: 4px; }
+  .qty-btn {
+    width: 24px; height: 24px; border-radius: 50%; border: 1.5px solid var(--border);
+    background: var(--surface); color: var(--text); font-size: 16px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; cursor: pointer; line-height: 1;
+    transition: all .15s; flex-shrink: 0;
+  }
+  .qty-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+  .qty-val { min-width: 28px; text-align: center; font-weight: 700; font-size: 14px; }
+
+  /* ─── PANELS ─── */
+  .panel { background: var(--surface); border-radius: var(--radius); padding: 10px 12px; margin-bottom: 8px; border: 1px solid var(--border); }
+  .section-label { font-size: 10px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 6px; }
+
+  /* ─── MODAL ─── */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 100;
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+    backdrop-filter: blur(2px);
+  }
+  .modal-overlay.hidden { display: none; }
+  .modal-box {
+    background: var(--surface); border-radius: var(--radius); padding: 24px 20px;
+    width: 100%; max-width: 340px; box-shadow: var(--shadow-lg);
+  }
+  .modal-box h2 { font-size: 15px; font-weight: 700; margin-bottom: 16px; }
+  .modal-box .modal-btns { display: flex; gap: 8px; margin-top: 16px; }
+
+  /* ─── TOAST ─── */
+  #toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: #1A1D23; color: #fff; padding: 10px 20px; border-radius: 30px;
+    font-size: 13px; font-weight: 600; z-index: 200; display: none;
+    white-space: nowrap; box-shadow: var(--shadow-lg);
+  }
+  #toast.show { display: block; animation: fadeInUp .3s ease; }
+  @keyframes fadeInUp { from { opacity: 0; transform: translateX(-50%) translateY(10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+
+  /* ─── STOCK LIST ─── */
+  .stock-list { overflow-y: auto; max-height: 320px; }
+  .stock-item {
+    display: flex; align-items: center; padding: 7px 0;
+    border-bottom: 1px solid var(--surface2); gap: 8px;
+  }
+  .stock-item:last-child { border-bottom: none; }
+  .stock-ref { flex: 1; min-width: 0; }
+  .stock-ref .ref-name { font-weight: 600; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .stock-ref .ref-dispo { font-size: 11px; color: var(--text3); }
+  .dispo-ok { color: var(--success) !important; font-weight: 700; }
+  .dispo-low { color: var(--accent-lum) !important; font-weight: 700; }
+  .dispo-zero { color: var(--danger) !important; font-weight: 700; }
+
+  /* ─── DESCRIPTIF PANEL ─── */
+  #desc-panel { font-size: 12px; color: var(--text2); line-height: 1.5; min-height: 40px; }
+
+  /* ─── HISTORIQUE TABLE ─── */
+  .hist-table-wrap { overflow: auto; max-height: 50vh; border: 1px solid var(--border); border-radius: var(--radius); }
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  th { background: var(--surface2); color: var(--text2); font-weight: 700; padding: 7px 8px; text-align: left; position: sticky; top: 0; white-space: nowrap; }
+  td { padding: 6px 8px; border-bottom: 1px solid var(--surface2); vertical-align: top; }
+  tr:hover td { background: var(--accent-light); }
+
+  /* ─── ADMIN REQUESTS LIST ─── */
+  .req-item {
+    padding: 8px 10px; border-radius: var(--radius-sm); background: var(--surface2);
+    margin-bottom: 6px; cursor: pointer; border: 1.5px solid transparent; transition: all .15s;
+  }
+  .req-item.selected { background: var(--accent-light); border-color: var(--accent); }
+  .req-item .ri-title { font-weight: 700; font-size: 12px; }
+  .req-item .ri-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+  /* ─── DOMAINE COLOR DOTS ─── */
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .dot-son { background: var(--accent-son); }
+  .dot-lum { background: var(--accent-lum); }
+  .dot-vid { background: var(--accent-vid); }
+
+  /* ─── SCROLLBAR ─── */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* ─── GRID HELPERS ─── */
+  .row { display: flex; gap: 8px; }
+  .row > * { flex: 1; min-width: 0; }
+  .col { display: flex; flex-direction: column; }
+
+  /* ─── LOGIN SCREEN ─── */
+  #login-screen {
+    position: fixed; inset: 0; background: linear-gradient(160deg, #1A1D23 0%, #2D3A5A 100%);
+    display: flex; align-items: center; justify-content: center; z-index: 50; padding: 20px;
+  }
+  #login-screen.hidden { display: none; }
+  .login-box {
+    background: var(--surface); border-radius: var(--radius); padding: 28px 24px;
+    width: 100%; max-width: 320px; box-shadow: var(--shadow-lg);
+  }
+  .login-box h2 { font-size: 16px; font-weight: 800; margin-bottom: 4px; }
+  .login-box p { font-size: 12px; color: var(--text3); margin-bottom: 18px; }
+  .login-admin-info { font-size: 11px; color: var(--text3); margin-top: 12px; text-align: center; }
+
+  /* ─── COMPACT ROW FOR USER SCREEN ─── */
+  .user-content {
+    padding: 10px 12px 24px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .two-col { display: flex; gap: 8px; }
+  .two-col > * { flex: 1; min-width: 0; }
+  .main-area { display: flex; gap: 8px; }
+  .list-col { flex: 1.2; display: flex; flex-direction: column; min-width: 0; }
+  .desc-col { flex: 0.8; display: flex; flex-direction: column; min-width: 0; }
+
+  /* ─── RESPONSIVE : SMARTPHONE ─── */
+  @media (max-width: 480px) {
+    html, body { font-size: 15px; }
+    .two-col { flex-direction: column; gap: 10px; }
+    .main-area { flex-direction: column; gap: 10px; }
+    .list-col, .desc-col { flex: none; }
+    select, input[type="text"], input[type="date"], input[type="password"] {
+      padding: 10px 12px; font-size: 16px; /* 16px empêche le zoom auto iOS */
+    }
+    .btn-print { padding: 14px; font-size: 14px; }
+    .stock-list { max-height: 50vh; overflow-y: auto; }
+    #desc-panel { min-height: 30px; }
+  }
+
+  /* ─── AJOUTER MODAL ─── */
+  .add-ref-list { max-height: 200px; overflow-y: auto; }
+  .add-ref-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 0; border-bottom: 1px solid var(--surface2);
+  }
+  .add-ref-item:last-child { border-bottom: none; }
+  .checkbox-label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; }
+  input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
+
+  /* ─── SUMMARY PRINT ─── */
+  #print-area {
+    background: #fff; padding: 20px; font-family: var(--font);
+    min-width: 320px; color: #1A1D23;
+  }
+  .print-header { text-align: center; margin-bottom: 16px; border-bottom: 2px solid #3B6FCA; padding-bottom: 12px; }
+  .print-header h2 { font-size: 16px; font-weight: 800; color: #3B6FCA; }
+  .print-header p { font-size: 11px; color: #666; }
+  .print-info { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 12px; font-size: 12px; }
+  .print-info dt { font-weight: 700; color: #666; font-size: 10px; text-transform: uppercase; }
+  .print-info dd { color: #1A1D23; }
+  .print-table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 8px; }
+  .print-table th { background: #3B6FCA; color: #fff; padding: 6px 8px; text-align: left; }
+  .print-table td { padding: 5px 8px; border-bottom: 1px solid #eee; }
+  .print-table tr:nth-child(even) td { background: #f5f7fc; }
+  .print-footer { margin-top: 16px; font-size: 10px; color: #999; text-align: center; }
+
+  /* ─── BADGE DOMAINE ─── */
+  .badge-domain {
+    font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 20px;
+    letter-spacing: .3px;
+  }
+  .badge-son { background: #E8EEFB; color: var(--accent-son); }
+  .badge-lum { background: #FDF3E3; color: var(--accent-lum); }
+  .badge-vid { background: #E3F5EF; color: var(--accent-vid); }
+
+  /* ─── STATUS CHIP ─── */
+  .chip {
+    font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 20px;
+    background: var(--surface2); color: var(--text2);
+  }
+  .chip-ok { background: #E3F5EF; color: var(--success); }
+  .chip-warn { background: #FDF3E3; color: var(--accent-lum); }
+  .chip-danger { background: #FEECEC; color: var(--danger); }
+
+  /* ─── AUTHENTIFICATION ─── */
+  .auth-screen {
+    display: none; min-height: 100vh; flex-direction: column;
+    align-items: center; justify-content: center; padding: 20px;
+    background: linear-gradient(135deg, #3B6FCA 0%, #2AA87E 100%);
+  }
+  .auth-screen.active { display: flex; }
+  
+  .auth-card {
+    background: var(--surface); border-radius: var(--radius);
+    box-shadow: var(--shadow-lg); padding: 32px 28px;
+    width: 100%; max-width: 380px;
+  }
+  
+  .auth-header {
+    text-align: center; margin-bottom: 28px;
+  }
+  .auth-header h1 {
+    font-size: 24px; font-weight: 800; color: var(--text);
+    margin-bottom: 4px; letter-spacing: -0.5px;
+  }
+  .auth-header p {
+    font-size: 12px; color: var(--text3); text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .auth-icon {
+    font-size: 48px; margin-bottom: 12px; display: block;
+  }
+  
+  .auth-tabs {
+    display: flex; gap: 8px; margin-bottom: 20px;
+  }
+  .auth-tab-btn {
+    flex: 1; padding: 10px; border: 2px solid var(--border);
+    border-radius: var(--radius-sm); background: var(--surface2);
+    color: var(--text2); font-weight: 700; font-size: 12px;
+    text-transform: uppercase; cursor: pointer; transition: all .2s;
+  }
+  .auth-tab-btn.active {
+    background: var(--accent); color: #fff; border-color: var(--accent);
+  }
+  
+  .auth-form { display: none; }
+  .auth-form.active { display: block; }
+  
+  .form-group-auth {
+    margin-bottom: 14px;
+  }
+  .form-group-auth label {
+    display: block; font-size: 11px; font-weight: 700;
+    color: var(--text2); margin-bottom: 5px; text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+  .form-group-auth input,
+  .form-group-auth select {
+    width: 100%; padding: 10px 12px; border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm); font-size: 13px; font-family: var(--font);
+    background: var(--surface); color: var(--text); outline: none;
+    transition: all .2s;
+  }
+  .form-group-auth input:focus,
+  .form-group-auth select:focus {
+    border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light);
+  }
+  
+  .password-strength {
+    margin-top: 8px; font-size: 11px;
+  }
+  .strength-bar {
+    height: 4px; background: var(--surface2); border-radius: 2px;
+    margin-bottom: 6px; overflow: hidden;
+  }
+  .strength-fill {
+    height: 100%; width: 0%; transition: width .3s, background .3s;
+  }
+  .strength-fill.weak { background: #D94040; width: 20%; }
+  .strength-fill.fair { background: #E8A020; width: 40%; }
+  .strength-fill.good { background: #F8BC3C; width: 60%; }
+  .strength-fill.strong { background: #2AA87E; width: 80%; }
+  .strength-fill.verystrong { background: #1A6F4F; width: 100%; }
+  
+  .criteria-list {
+    font-size: 11px; color: var(--text3); line-height: 1.6;
+  }
+  .criteria-item {
+    padding: 3px 0; display: flex; align-items: center; gap: 6px;
+  }
+  .criteria-item.met { color: var(--success); font-weight: 600; }
+  .criteria-icon {
+    display: inline-block; width: 12px; text-align: center;
+  }
+  
+  .btn-auth {
+    width: 100%; padding: 11px; border: none; border-radius: var(--radius-sm);
+    font-size: 13px; font-weight: 700; letter-spacing: 0.5px;
+    cursor: pointer; transition: all .2s; margin-top: 20px;
+  }
+  .btn-auth-primary {
+    background: var(--accent); color: #fff;
+  }
+  .btn-auth-primary:hover:not(:disabled) {
+    filter: brightness(1.1);
+  }
+  .btn-auth-primary:disabled {
+    opacity: 0.5; cursor: not-allowed;
+  }
+  
+  .auth-message {
+    margin-top: 14px; padding: 10px 12px; border-radius: var(--radius-sm);
+    font-size: 12px; text-align: center; display: none;
+  }
+  .auth-message.error {
+    display: block; background: #FEECEC; color: var(--danger); border: 1px solid #F5D5D5;
+  }
+  .auth-message.success {
+    display: block; background: #E3F5EF; color: var(--success); border: 1px solid #D0EFE7;
+  }
+  
+  .auth-footer {
+    margin-top: 16px; text-align: center; font-size: 12px; color: var(--text3);
+  }
+  .auth-footer a {
+    color: var(--accent); text-decoration: none; font-weight: 600;
+  }
+  .auth-footer a:hover {
+    text-decoration: underline;
+  }
+
+  /* ─── HEADER AUTHENTIFIÉ ─── */
+  .user-menu {
+    display: flex; align-items: center; gap: 12px; font-size: 12px;
+  }
+  .user-info {
+    color: var(--text2); font-weight: 600;
+  }
+  .user-menu .btn-secondary {
+    background: var(--surface2); color: var(--text);
+    padding: 6px 12px; border-radius: var(--radius-sm);
+    border: none; cursor: pointer; font-size: 11px; font-weight: 700;
+    transition: all .2s;
+  }
+  .user-menu .btn-secondary:hover {
+    background: var(--border);
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════
+     DONNÉES GLOBALES (à adapter / remplacer par Google Sheets)
+     ══════════════════════════════════════════════ -->
+<script>
+// ─── CONFIGURATION ───
+const CONFIG = {
+  // URL de déploiement Google Apps Script (mode dev)
+  SHEET_URL: "SHEET_URL: "https://script.google.com/macros/s/AKfycbzBLw7Xq9bwvoJNJiliVynje7_ymavkvv8c2n_KAHfcLM8vgoX3LLVa74yyBN2HgKZs/exec",
+  ADMIN_PASSWORD: "admin" // fallback, overridden per admin below
+};
+
+const ADMINS = [
+  { nom: "Dolet Alex",      domaine: "SON",    password: "admin SON",   color: "son" },
+  { nom: "Bidaud Luc",      domaine: "LUMIERE",password: "admin LUM",   color: "lum" },
+  { nom: "Squillace David", domaine: "VIDEO",  password: "admin VIDEO", color: "vid" },
+];
+
+const UTILISATEURS = [
+  "HriHpsimé ANDREASYAN","Marine BOUCEY","Camille BOURGEOIS","Sarah CORMORECHE","Luc BIDAUD","David SQUILLACE","Alexandre DOLET",
+  "Evan CUBY","Louba DAI'K SCHWAB","Evan DUVAL","Louison MASO","Maxence MONNOT","Romain DARGENT","Hugo GIRARDOT","Clément GUIOT",
+  "Kéo LE PENNEC","Hannah LEPARGNEUR","Enzo PETITPAS","Louis TROVALLET"
+];
+
+// ─── CATALOGUE DU STOCK ───
+let STOCK = {
+  SON: [
+    { ref:"Mac Mini 2023", desc:"Informatique", qte:1, qteDispo:1 },
+	{ ref:"MAcBook Pro 2014", desc:"Informatique", qte:1, qteDispo:1 },
+	{ ref:"Acer Iconia One 10", desc:"Informatique", qte:1, qteDispo:1 },
+	{ ref:"Yamaha 01V", desc:"Console de mixage numérique", qte:1, qteDispo:1 },
+    { ref:"Yamaha PM5D", desc:"Console de mixage numérique", qte:1, qteDispo:1 },
+    { ref:"Yamaha DM7", desc:"Console de mixage numérique", qte:1, qteDispo:1 },
+    { ref:"Soundcraft Si Expression", desc:"Console de mixage numérique", qte:1, qteDispo:1 },
+    { ref:"Soundcraft Si Performer", desc:"Console de mixage numérique", qte:1, qteDispo:1 },
+    { ref:"Midas M32", desc:"Console de mixage numérique", qte:1, qteDispo:1 },
+    { ref:"Behringer X32 Compact", desc:"Console de mixage numérique", qte:1, qteDispo:1 },
+    { ref:"Yamaha MG12", desc:"Console de mixage analogique", qte:1, qteDispo:1 },
+	{ ref:"Yamaha M3000", desc:"Console de mixage analogique", qte:1, qteDispo:1 },
+	{ ref:"Db Techno LVX", desc:"Enceintes de sonorisation", qte:1, qteDispo:1 },
+	{ ref:"Allen & Heath GL2400", desc:"Console de mixage analogique", qte:1, qteDispo:1 },
+	{ ref:"Db Techno LVX", desc:"Enceintes Sonorisation", qte:2, qteDispo:2 },
+	{ ref:"E15X - Sub", desc:"Enceintes Sonorisation", qte:2, qteDispo:2 },
+	{ ref:"E12", desc:"Enceintes Sonorisation", qte:2, qteDispo:2 },
+	{ ref:"Nexo CD12", desc:"Enceintes Sonorisation", qte:2, qteDispo:2 },
+	{ ref:"Nexo Geo S8", desc:"Enceintes Sonorisation", qte:8, qteDispo:8 },
+	{ ref:"EV SX 100+", desc:"Enceintes Sonorisation", qte:4, qteDispo:4 },
+	{ ref:"EV SX 300", desc:"Enceintes Sonorisation", qte:4, qteDispo:4 },
+	{ ref:"SUB Martin", desc:"Enceintes Sonorisation", qte:2, qteDispo:2 },
+	{ ref:"Tete Martin", desc:"Enceintes Sonorisation", qte:2, qteDispo:2 },
+	{ ref:"Yamaha MSP 5", desc:"Enceintes Monitoring", qte:7, qteDispo:7 },
+	{ ref:"T7V Adam Audio", desc:"Enceintes Monitoring", qte:2, qteDispo:2 },
+	{ ref:"Focal - Alpha 80 EVO", desc:"Enceintes Monitoring", qte:2, qteDispo:2 },
+	{ ref:"Processeur Nexo NX241", desc:"Amplification", qte:1, qteDispo:1 },
+	{ ref:"Camco Vortex 4", desc:"Amplification", qte:2, qteDispo:2 },
+	{ ref:"T Amp TA2400", desc:"Amplification", qte:1, qteDispo:1 },
+	{ ref:"T Amp Tsa4-700", desc:"Amplification", qte:1, qteDispo:1 },
+	{ ref:"D12", desc:"Amplification", qte:2, qteDispo:2 },
+	{ ref:"Scarlet 18i20 2nd", desc:"Interfaces", qte:1, qteDispo:1 },
+	{ ref:"Scarlet 18i20 3nd", desc:"Interfaces", qte:1, qteDispo:1 },
+	{ ref:"Dbx AFS2", desc:"Auxiliaires", qte:1, qteDispo:1 },
+	{ ref:"Klak Teknik 2 x31 band", desc:"Auxiliaires", qte:1, qteDispo:1 },
+	{ ref:"Behringer UltraGain", desc:"Auxiliaires", qte:1, qteDispo:1 },
+	{ ref:"Dbx 223xs", desc:"Auxiliaires", qte:1, qteDispo:1 },
+	{ ref:"Dbx 231s", desc:"Auxiliaires", qte:3, qteDispo:3 },
+	{ ref:"Drawmer MX40", desc:"Auxiliaires", qte:1, qteDispo:1 },
+	{ ref:"SSL Xlogic Alpha Channel", desc:"Auxiliaires", qte:1, qteDispo:1 },
+	{ ref:"Art Pro Channel", desc:"Auxiliaires", qte:1, qteDispo:1 },
+	{ ref:"Behringer Ultrapatch Pro", desc:"Auxiliaires", qte:1, qteDispo:1 },
+	{ ref:"SBehringer Composer", desc:"Auxiliaires", qte:1, qteDispo:1 },
+	{ ref:"Berhinger Autocom pro xl", desc:"Auxiliaires", qte:1, qteDispo:1 },
+	{ ref:"Drawmer Mx30", desc:"Auxiliaires", qte:1, qteDispo:1 },
+	{ ref:"Grand pied micro", desc:"Pieds", qte:14, qteDispo:14 },
+	{ ref:"Petit Pied Micro", desc:"Pieds", qte:9, qteDispo:9 },
+	{ ref:"Pied enceintes monitoring", desc:"Pieds", qte:7, qteDispo:7 },
+	{ ref:"Pied enceintes sonorisation", desc:"Pieds", qte:15, qteDispo:15 },
+	{ ref:"Zoom H4n", desc:"Accessoires", qte:6, qteDispo:6 },
+	{ ref:"zoom RC4", desc:"Accessoires", qte:1, qteDispo:1 },
+	{ ref:"Eyeball", desc:"Accessoires", qte:1, qteDispo:1 },
+	{ ref:"Filtre Anti-pop", desc:"Accessoires", qte:2, qteDispo:2 },
+	{ ref:"Ampli Guitare", desc:"Backline", qte:1, qteDispo:1 },
+	{ ref:"Ampli Piano", desc:"Backline", qte:1, qteDispo:1 },
+	{ ref:"Multipaire 8 paires 10m", desc:"Câble", qte:3, qteDispo:3 },
+	{ ref:"Touret RJ45 50m", desc:"Câble", qte:3, qteDispo:3 },
+	{ ref:"Speakon 4 points", desc:"Câble", qte:0, qteDispo:0 },
+	{ ref:"Speakon 2 points", desc:"Câble", qte:0, qteDispo:0 },
+	{ ref:"XLR 3m", desc:"Câble", qte:0, qteDispo:0 },
+	{ ref:"XLR 5m", desc:"Câble", qte:0, qteDispo:0 },
+	{ ref:"XLR 10m", desc:"Câble", qte:0, qteDispo:0 },
+	{ ref:"XLR 15m", desc:"Câble", qte:0, qteDispo:0 },
+	{ ref:"XLR 20m", desc:"Câble", qte:0, qteDispo:0 },
+	{ ref:"Kit Audix DP7", desc:"Microphones", qte:1, qteDispo:1 },
+	{ ref:"Kit DrumShure PG", desc:"Microphones", qte:1, qteDispo:1 },
+	{ ref:"Dbx RTA-M", desc:"Microphones", qte:1, qteDispo:1 },
+	{ ref:"Sonomètre Roline", desc:"Microphones", qte:1, qteDispo:1 },
+	{ ref:"Sennheiser XS Wireless", desc:"Microphones", qte:1, qteDispo:1 },
+	{ ref:"Shure Beta 91a", desc:"Microphones", qte:2, qteDispo:2 },
+	{ ref:"Shure Beta 52a", desc:"Microphones", qte:1, qteDispo:1 },
+	{ ref:"AKG 112", desc:"Microphones", qte:1, qteDispo:1 },
+	{ ref:"Kit PG58 HF", desc:"Microphones", qte:1, qteDispo:1 },
+	{ ref:"Beta 87", desc:"Microphones", qte:1, qteDispo:1 },
+	{ ref:"e815s", desc:"Microphones", qte:1, qteDispo:1 },
+	{ ref:"e825s", desc:"Microphones", qte:1, qteDispo:1 },
+	{ ref:"Rode NTG4", desc:"Microphones", qte:1, qteDispo:1 },
+	{ ref:"Rode NTG4+", desc:"Microphones", qte:1, qteDispo:1 },
+	{ ref:"Audio Technica système 10 HF", desc:"Microphones", qte:1, qteDispo:1 },
+	{ ref:"T.Bone Headmike-O", desc:"Microphones", qte:1, qteDispo:1 },
+	{ ref:"Shure SM57", desc:"Microphones", qte:5, qteDispo:5 },
+	{ ref:"Shure Beta 57a", desc:"Microphones", qte:2, qteDispo:2 },
+	{ ref:"Shure Beta 58a", desc:"Microphones", qte:1, qteDispo:1 },
+	{ ref:"Shure SM58", desc:"Microphones", qte:4, qteDispo:4 },
+	{ ref:"Sennheiser e604", desc:"Microphones", qte:3, qteDispo:3 },
+	{ ref:"Sennheiser e906", desc:"Microphones", qte:2, qteDispo:2 },
+	{ ref:"Neumann KM184", desc:"Microphones", qte:2, qteDispo:2 },
+	{ ref:"Sennheiser K6", desc:"Microphones", qte:2, qteDispo:2 },
+	{ ref:"Kit micro casque Shure HF", desc:"Microphones", qte:1, qteDispo:1 },
+	{ ref:"Audio Technica 4041", desc:"Microphones", qte:2, qteDispo:2 },
+	{ ref:"Sennheiser MD421", desc:"Microphones", qte:1, qteDispo:1 },
+	{ ref:"Kit Lavallier Sennheiser HF", desc:"Microphones", qte:2, qteDispo:2 },
+	{ ref:"Kit Lavallier Shure HF", desc:"Microphones", qte:1, qteDispo:1 },
+	{ ref:"AKG C414", desc:"Microphones", qte:1, qteDispo:1 },
+	{ ref:"T.Bone SC-1100", desc:"Microphones", qte:1, qteDispo:1 },
+	{ ref:"Rode NT1-A", desc:"Microphones", qte:1, qteDispo:1 },
+	{ ref:"AKG Col de Cygne", desc:"Microphones", qte:4, qteDispo:4 },
+	{ ref:"Audio Technica Col de Sygne", desc:"Microphones", qte:3, qteDispo:3 },
+	{ ref:"Millenium DI-33", desc:"DI Box", qte:2, qteDispo:2 },
+	{ ref:"SAR-133", desc:"DI Box", qte:4, qteDispo:4 },
+	{ ref:"Millenium DI-Pro", desc:"DI Box", qte:1, qteDispo:1 },
+	{ ref:"Behringer Ultra DI", desc:"DI Box", qte:3, qteDispo:3 },
+	{ ref:"Palmer ReAmplifivation Box", desc:"DI Box", qte:1, qteDispo:1 },
+	
+	  ],
+  LUMIERE: [
+    { ref:"ParLed VARYTEC ", desc:"Projecteur PAR LED RGBW 7ch 18x18W VARYTEC", qte:5, qteDispo:5 },
+	{ ref:"ParLed ADJ ", desc:"Par LED IP65 12x20W RGBL avec zoom 5°-30° Encore LP12Z IP ADJ", qte:6, qteDispo:6 },
+	{ ref:"Btx 180 BRITEQ", desc:"Lyres SPOT BTX180 SL BRITEQ", qte:4, qteDispo:4 },
+	{ ref:"Mac 700SP MARTIN", desc:"Lyres SPOT Mac700 MARTIN", qte:4, qteDispo:4 },
+	{ ref:"Mac 700W MARTIN", desc:"Lyres WASH Mac700 MARTIN", qte:8, qteDispo:8 },
+	{ ref:"Tornado 7 BRITEQ", desc:"Lyres WASH Tornado 7 RGBW BRITEQ", qte:6, qteDispo:6 },
+	{ ref:"Mirroir motorisé", desc:"Lyre Mirroir 2ch XY", qte:1, qteDispo:1 },
+	{ ref:"Powermatrix BRITEQ ", desc:"Powermatrix MK2 RGB BRITEQ", qte:2, qteDispo:2 },
+	{ ref:"Cycliode led BRITEQ", desc:"Cycliode led 160w 80°/50° BTI-CYCLO RGBALC BRITEQ", qte:6, qteDispo:6 },
+	{ ref:"Cycliode Halogène", desc:"Cycliode halogène 1000w 80°/50° ADB", qte:8, qteDispo:8 },
+	{ ref:"PC 1Kw RVE", desc:"PC martelé 1000w 10°/60°serenity PC10 RVE", qte:10, qteDispo:10 },
+	{ ref:"PC 1Kw RJ", desc:"PC clair 1000w 10°/60° 310 HPC ROBERT JULIAT", qte:6, qteDispo:6 },
+	{ ref:"PC 2Kw RVE", desc:"PC claire 2000w 10°/60°serenity PC20 RVE", qte:1, qteDispo:1 },
+	{ ref:"Fresnel 650w", desc:"Fesnel 650w scena DTS", qte:1, qteDispo:1 },
+	{ ref:"Découpe Z10 RVE", desc:"Découpe 1000w 10°/29° Serenity Z10 RVE", qte:1, qteDispo:1 },
+	{ ref:"Découpe 614S RJ", desc:"Découpe 1000w 13°/48° 614S ROBERT JULIAT", qte:3, qteDispo:3 },
+	{ ref:"Découpe Source Four ETC", desc:"Découpe 1000w 25°/50° Source Four ETC", qte:1, qteDispo:1 },
+	{ ref:"Découpe Harmony RT", desc:"Découpe 1000w 15°/28° Harmony Rank Stand ", qte:6, qteDispo:6 },
+	{ ref:"Découpe Harmony RT", desc:"Découpe 1000w 22°/40° Harmony Rank Stand", qte:6, qteDispo:6 },
+	{ ref:"Par64", desc:"PAR64 1000w", qte:10, qteDispo:10 },
+	{ ref:"Par56", desc:"PAR56 300w", qte:4, qteDispo:4 },
+	{ ref:"Par36 F1", desc:"PAR36 F1 36w", qte:12, qteDispo:12 },
+	{ ref:"Rampe fluo", desc:"Réglettes fluo 36w 4000°K 1,20m IP 65", qte:10, qteDispo:10 },
+	{ ref:"Rampe fluo LM", desc:"Réglettes lumière noire 36W 1,20m DTS", qte:4, qteDispo:4 },
+	{ ref:"Poursuite", desc:"Poursuite 1200w HMI DTS", qte:1, qteDispo:1 },
+    { ref:"Console GMA2 comm", desc:"GrandMA2onPC Commande wing 1204 MALIGHTING", qte:1, qteDispo:1 },
+	{ ref:"Console GMA2 fade", desc:"GrandMA2onPC Fader wing 2048 MALIGHTING", qte:1, qteDispo:1 },
+	{ ref:"Console EOS", desc:"ION xe20 2048 ETC", qte:1, qteDispo:1 },
+	{ ref:"Console GMA1", desc:"GrandMA1 Ultralight MALIGHTING", qte:1, qteDispo:1 },
+	{ ref:"Console Trad1", desc:"Lightcommande II 24/48 MALIGHTING", qte:1, qteDispo:1 },
+	{ ref:"Console Trad2", desc:"Titan 24/48/12 RVE", qte:1, qteDispo:1 },
+	{ ref:"Plitter DMXRDM", desc:"Splitter DMX/RDM 1 IN/6 OUT 5pts/3pts", qte:1, qteDispo:1 },
+	{ ref:"Plitter DMX", desc:"Splitter DMX 1 IN/8 OUT 5pts", qte:1, qteDispo:1 },
+	{ ref:"Démux 1", desc:"Démultilpexeur convertisseur DMX/anologique 60circ RVE", qte:1, qteDispo:1 },
+	{ ref:"Démux 2", desc:"Démultilpexeur convertisseur DMX/anologique 60circ ADB", qte:1, qteDispo:1 },
+	{ ref:"Node ARTNET/sACN", desc:"2pornode GrandMA2 1024 MALIGHTING", qte:1, qteDispo:1 },
+	{ ref:"Node USB/DMX PRO", desc:"Interface usb/dmx ENTEC DMX PRO 1OUT/1IN", qte:1, qteDispo:1 },
+	{ ref:"Node USB/DMX OPEN", desc:"Interface usb/dmx ENTEC OPEN DMX 1OUT", qte:1, qteDispo:1 },
+	{ ref:"Moniteur 17", desc:"Ecrans LCD Tactile 17 pouces", qte:1, qteDispo:1 },
+	{ ref:"Moniteur 21 GMA2", desc:"Ecrans LCD Tactile 21 pouces", qte:2, qteDispo:2 },
+	{ ref:"Moniteur IONXE20", desc:"Ecrans LCD Tactile 27 pouces", qte:2, qteDispo:2 },
+	{ ref:"Moniteur 17", desc:"Ecran 17 pouces", qte:1, qteDispo:1 },
+	{ ref:"Moniteur 15", desc:"Ecran 15 pouces", qte:6, qteDispo:6 },
+	{ ref:"Gradateur 12x2kw", desc:"Bloc gradateur 12X2kw DIMKIT RVE", qte:2, qteDispo:2 },
+	{ ref:"Gradateur 12x2kw", desc:"Bloc gradateur 12X2kw SPYSI ZERO88", qte:2, qteDispo:2 },
+	{ ref:"Gradateur Mini", desc:"Gradateur 4X900w/4 PC16A", qte:2, qteDispo:2 },
+	{ ref:"Gradateur 12x2kw anologique", desc:"Bloc gradateur analogique 12X2kw GALATEC", qte:1, qteDispo:1 },
+	{ ref:"MAB", desc:"Machine a brouillard magnum 2500 MARTIN", qte:1, qteDispo:1 },
+	{ ref:"MAF L", desc:"Machine a fumé lourde", qte:1, qteDispo:1 },
+	{ ref:"FAN", desc:"Ventilateur diamètre 30cm", qte:1, qteDispo:1 },
+    { ref:"Dmx3 3m", desc:"Câble Dmx XLR 3pts 3m", qte:20, qteDispo:20 },
+	{ ref:"Dmx3 5", desc:"Câble Dmx XLR 3pts 5m", qte:20, qteDispo:20 },
+	{ ref:"Dmx3 10m", desc:"Câble Dmx XLR 3pts 10m", qte:20, qteDispo:20 },
+	{ ref:"Dmx3 15m", desc:"Câble Dmx XLR 3pts 15m", qte:20, qteDispo:20 },
+	{ ref:"Dmx3 20m", desc:"Câble Dmx XLR 3pts 20m", qte:20, qteDispo:20 },
+	{ ref:"Dmx5 3m", desc:"Câble Dmx XLR 5pts 3m", qte:20, qteDispo:20 },
+	{ ref:"Dmx5 5m", desc:"Câble Dmx XLR 5pts 5m", qte:20, qteDispo:20 },
+	{ ref:"Dmx5 10m", desc:"Câble Dmx XLR 5pts 10m", qte:20, qteDispo:20 },
+	{ ref:"Dmx5 15m", desc:"Câble Dmx XLR 5pts 15m", qte:20, qteDispo:20 },
+	{ ref:"Dmx5 20m", desc:"Câble Dmx XLR 5pts 20m", qte:20, qteDispo:20 },
+	{ ref:"Adaptateur Dmx 3/5pts", desc:"Adaptateur Dmx XLR 3pts Mâle/5pts Femmel", qte:10, qteDispo:10 },
+	{ ref:"Adaptateur Dmx 5/3pts", desc:"Adaptateur Dmx XLR 5pts Mâle/3pts Femmel", qte:10, qteDispo:10 },
+	{ ref:"Prolongateur 3m", desc:"Câble d'alimentation electrique PC16A 3m", qte:20, qteDispo:20 },
+	{ ref:"Prolongateur 5m", desc:"Câble d'alimentation electrique PC16A 5m", qte:20, qteDispo:20 },
+	{ ref:"Prolongateur 10m", desc:"Câble d'alimentation electrique PC16A 10m", qte:20, qteDispo:20 },
+	{ ref:"Prolongateur 20m", desc:"Câble d'alimentation electrique PC16A 20m", qte:20, qteDispo:20 },
+	{ ref:"Multiprise", desc:"Quadruplette PC16A", qte:20, qteDispo:20 },
+	{ ref:"Multi Harting 5m", desc:"Multipaire 6 circuits 5m Harting", qte:2, qteDispo:2 },
+	{ ref:"Multi Harting 10m", desc:"Multipaire 6 circuits 10m Harting", qte:2, qteDispo:2 },
+	{ ref:"Multi Harting 20m", desc:"Multipaire 6 circuits 20m Harting", qte:4, qteDispo:4 },
+	{ ref:"Fouet Harting Mâle", desc:"FOUET Mâle 6 circuits HARTING", qte:20, qteDispo:20 },
+	{ ref:"Fouet Harting Femmel", desc:"FOUET Femelle 6 circuits HARTING", qte:20, qteDispo:20 },
+	{ ref:"Alim 32A Tétra 5m", desc:"Câble d'alimentation electrique P17 32A tétra 5m", qte:1, qteDispo:1 },
+	{ ref:"Alim 32A Tétra 10m", desc:"Câble d'alimentation electrique P17 32A tétra 10m", qte:1, qteDispo:1 },
+	{ ref:"Alim 63A Tétra 15m", desc:"Câble d'alimentation electrique P17 63A tétra 15m", qte:1, qteDispo:1 },
+	{ ref:"BAL 32A tétra", desc:"Boiier d'alimentation electrique 32Atri/out 1xP17 32Atri/2xP17 16Atri/8xPC16A", qte:1, qteDispo:1 },
+	{ ref:"BAL 16A tétra", desc:"Boiier d'alimentation electrique 16Atri/out 8xPC16A", qte:1, qteDispo:1 },
+	{ ref:"Mât de levage 5.50m", desc:"Mat de levage ALT550 250kg/5,50m ASD", qte:4, qteDispo:4 },
+	{ ref:"Trépierd 1.70m", desc:"Trépied 1,70m + tourelle", qte:4, qteDispo:4 },
+    { ref:"Structure 0.50m", desc:"Structure alu Serie 290 Carré 0.50m QuickTrussss", qte:4, qteDispo:4 },
+	{ ref:"Structure 1m", desc:"Structure alu Serie 290 Carré 1m QuickTrussss", qte:4, qteDispo:4 },
+	{ ref:"Structure 2m", desc:"Structure alu Serie 290 Carré 2m QuickTruss + accessoires", qte:22, qteDispo:22 },
+	{ ref:"Embase Lourde", desc:"Embase lourde ronde Serie 290 Carré diamètre 80mm/40kg QuickTruss", qte:8, qteDispo:8 },
+	{ ref:"Angle 3D90", desc:"Angle 3D 90° Carré QuickTruss + accessoires", qte:4, qteDispo:4 },
+	{ ref:"Angle 3DT", desc:"Angle 3D T Carré QuickTruss + accessoires", qte:4, qteDispo:4 },
+	{ ref:"Angle 2D90", desc:"Angle 2D 90° Carré QuickTruss + accessoires", qte:4, qteDispo:4 },
+	{ ref:"Tube 1.20m", desc:"Ttube alu diamètre 50mn 1.20m", qte:5, qteDispo:5 },
+	{ ref:"Tube 3m", desc:"Ttube alu diamètre 50mn 3m", qte:5, qteDispo:5 },
+    { ref:"Collier rotatif", desc:"Collier double rotatif 50mn", qte:8, qteDispo:8 },	
+	{ ref:"Pendrillon 3X3.50m", desc:"Pendrillon coton noir 3x3.50m", qte:4, qteDispo:4 },
+	{ ref:"Pendrillon 3X6m", desc:"Pendrillon coton noir 3x6m", qte:6, qteDispo:6 },
+	{ ref:"Pendrillon 5X6m", desc:"Pendrillon coton noir 5x6m", qte:1, qteDispo:1 },
+	{ ref:"Frise 6X1m", desc:"Frise coton noir 6x1m", qte:2, qteDispo:2 },
+	{ ref:"Frise 6X0.60m", desc:"Frise coton noir 6x0.60m", qte:2, qteDispo:2 },
+	{ ref:"Cyclorama", desc:"Cyclorama gris PVC 8x6m", qte:1, qteDispo:1 },
+	{ ref:"Tulle blanc", desc:"Tulle blanc 4x5m", qte:1, qteDispo:1 },
+	{ ref:"Pince-noire", desc:"Pince a rideau noir + nouette", qte:10, qteDispo:10 },
+	{ ref:"Pince-blanche", desc:"Pince a rideau blanche + nouette", qte:10, qteDispo:10 },
+	{ ref:"Poulie 200kg", desc:"Poulie simple CMU 200kg", qte:2, qteDispo:2 },
+	{ ref:"Poulie SIMPLE 5kg", desc:"Poulie simple CMU 5kg", qte:10, qteDispo:10 },
+	{ ref:"Poulie DOUBLE 5kg", desc:"Poulie double CMU 5kg", qte:10, qteDispo:10 },
+	{ ref:"Poulie TRIPLE 5kg", desc:"Poulie triple CMU 5kg", qte:10, qteDispo:10 },
+	{ ref:"Casque", desc:"Casque de travail en hauteur PETZL", qte:6, qteDispo:6 },
+	{ ref:"Harnais", desc:"Harnais antichute + Longe PETZL", qte:6, qteDispo:6 },
+	
+  ],
+  VIDEO: [
+    { ref:"Cam SONY", desc:"Appareil photo α7S 4K Sony + objectif 24-70mm", qte:1, qteDispo:1 },
+    { ref:"Cam JVC", desc:"Caméra jvc pro HD hdv 720 p - gy - hd101 en 4k", qte:2, qteDispo:2 },
+    { ref:"Cam GH5", desc:"Appareil photo Panasonic Lumix GH5 4K capteur Live MOS de 20,3 mégapixels", qte:1, qteDispo:1 },
+    { ref:"Cam GH5S", desc:"Appareil photo Panasonic Lumix 4K capteur Live MOS de 10,2 mégapixels", qte:1, qteDispo:1 },
+    { ref:"Cam JVC", desc:"Caméra 4K Ultra HD Full HD 4:2:2 à 50 Mbps", qte:4, qteDispo:4 },
+    { ref:"Cam GOPRO", desc:"Caméra", qte:2, qteDispo:2 },
+    { ref:"Cam tourelle JVC", desc:"Caméra tourelle JVC avec contrôleur", qte:4, qteDispo:4 },
+	{ ref:"Cam C100 Mark2", desc:"Canon C100 Mark 2 + Objectif", qte:1, qteDispo:1 },
+	{ ref:"Pied MANFROTTO", desc:"Pieds Manfrotto", qte:6, qteDispo:6 },
+	{ ref:"Pied BENRO", desc:"Pieds Benro", qte:2, qteDispo:2 },
+	{ ref:"VP OPTOMA", desc:"Vidéo projecteur Optoma", qte:2, qteDispo:2 },
+	{ ref:"VP NEC", desc:"vidéo Projecteur NEC NP-PA853WG", qte:2, qteDispo:2 },
+	{ ref:"Disque Dur", desc:"Disque dur Lacie", qte:2, qteDispo:2 },
+	{ ref:"Blackjet", desc:"Station d'accueil BLACKJET VX-2SSD double SSD 2,5 pouce USB3 Gen2", qte:2, qteDispo:2 },
+	{ ref:"VP NEC", desc:"Surface de contrôle étendue à 32 touches Stream Deck XL Elgato", qte:1, qteDispo:1 },
+	{ ref:"Moniteur JVC", desc:"Ecran JVC VFHP 790 G", qte:1, qteDispo:1 },
+	{ ref:"Moniteur SONY", desc:"Moniteur Sony", qte:2, qteDispo:2 },
+	{ ref:"Moniteur", desc:"Ecran ViewSonic", qte:1, qteDispo:1 },
+	{ ref:"Moniteur LCD", desc:"moniteur BlackMagic portable, enregistreur, un scope portable,viseur pour caméra", qte:1, qteDispo:1 },
+	{ ref:"Cover", desc:"Housse cameras Manfrotto", qte:1, qteDispo:1 },
+    { ref:"TV", desc:"TV 100cm", qte:1, qteDispo:1 },
+	{ ref:"Moniteur ninja", desc:"Atomos Ninja", qte:1, qteDispo:1 },
+	{ ref:"Moniteur vidéoassist", desc:"Blackmagic Videoassist", qte:1, qteDispo:1 },
+	{ ref:"iMAC", desc:"iMac 27 pouces", qte:2, qteDispo:2 },
+	{ ref:"Cross épaule", desc:"Cross d’épaule", qte:1, qteDispo:1 },
+	{ ref:"Ronin", desc:"DJI Ronins", qte:2, qteDispo:2 },
+	{ ref:"Bras magique", desc:"Bras articulé Manfrontto", qte:1, qteDispo:2 },
+	{ ref:"Bague adapt", desc:"Bague d’adaptation Fujinon", qte:1, qteDispo:1 },
+	{ ref:"Objectif VP", desc:"Objectif Nec NP13 ZL", qte:1, qteDispo:1 },
+	{ ref:"Objectif VP2", desc:"Objectif Nec NP14 ZL", qte:1, qteDispo:1 },
+	{ ref:"Recordeur BLACKMAGIC", desc:"Enregistrue H264 Pro Recorder BLACKMAGIC", qte:1, qteDispo:1 },
+	{ ref:"Switch", desc:"Commutateur Fast Ethernet 24 Ports 10/100Mbit/s D-Link Des-1024R", qte:2, qteDispo:2 },
+	{ ref:"Switch 2", desc:"Commutateur Fast Ethernet Delink DGS-1100-16", qte:1, qteDispo:1 },
+	{ ref:"Switch 3", desc:"Commutateur 16 ports Fast Ethernet ALIED telesis AT-FS7 16L", qte:1, qteDispo:1 },
+	{ ref:"Extendeur", desc:"Extendeur HDBaseT 1 émetteur 1 récepteur TP70SP", qte:2, qteDispo:2 },
+	{ ref:"Incrustation", desc:"Incrustateur en temps réel Ultimate 12 HD MINI", qte:3, qteDispo:3 },
+	{ ref:"HF Intercom", desc:"Systèmes Intercom sans fils", qte:2, qteDispo:2 },
+	{ ref:"HF vidéo", desc:"Système de transmission vidéo HF sans fil HDMI SDI HD Swift 800 Pro", qte:2, qteDispo:2 },
+	{ ref:"HF vidéo 2", desc:"Kit 1 émetteur DV / 1 récepteur sans fil Multicast 150m/3G-SDI & HDMI Swift Flow 500", qte:1, qteDispo:1 },
+	{ ref:"HF Micro", desc:"Système de 2 micro sans fil ultra-compacts HOLLYLAND LARK 150", qte:1, qteDispo:1 },
+	{ ref:"Micro RODE", desc:"Microphone canon rode NTG4 polyvalent", qte:1, qteDispo:1 },
+	{ ref:"Micro RODE+", desc:"Microphone canon rode NTG4+ polyvalent", qte:1, qteDispo:1 },
+	{ ref:"Perche Micro", desc:"Perche micro", qte:2, qteDispo:2 },
+	{ ref:"Câble Micro", desc:"Câbles XLR3", qte:2, qteDispo:2 },
+	{ ref:"Console SON", desc:"Table de mixage Yamaha", qte:1, qteDispo:1 },
+	{ ref:"Ecoute", desc:"Moniteur stéréo rackable Fostex RM1", qte:1, qteDispo:1 },
+	{ ref:"Ecoute 2", desc:"Casque AKG", qte:1, qteDispo:1 },
+	{ ref:"DataPatch", desc:"Datapath contrôleur pour les murs vidéo multi-écrans", qte:4, qteDispo:4 },
+	{ ref:"Visualiseur", desc:"Visualiser en temps réel plusieurs images sur différents écrans préconfigurés.Zandar MX4 QUAD Multiview", qte:1, qteDispo:1 },
+	{ ref:"Travelling", desc:"Rail/Barres de travelling Slider E-Image", qte:1, qteDispo:1 },
+	{ ref:"Disque dure", desc:"BlackMagic design SSD", qte:1, qteDispo:1 },
+	{ ref:"Atem tv studio", desc:"Mélangeur en direct intégrant un panneau de contrôle broadcast. ATEM TELEVISION STUDIO", qte:1, qteDispo:1 },
+	{ ref:"Disque dure", desc:"BlackMagic design SSD", qte:1, qteDispo:1 },	
+	{ ref:"Convertisseur SDI/HDMI", desc:"Convertisseur SDI vers HDMI BlackMagic", qte:4, qteDispo:4 },
+	{ ref:"Convertisseur SDI/ANALOG", desc:"Convertisseur SDI vers analogique", qte:1, qteDispo:1 },
+	{ ref:"Convertisseur HDMI/SDI", desc:"Convertisseur HDMI vers SDI BlackMagic", qte:4, qteDispo:4 },
+	{ ref:"Convertisseur UpDownCross", desc:"Convertisseur qui permet de convertir SD ou HD en n’importe quel autre format BlackMagic", qte:7, qteDispo:7 },
+	{ ref:"Convertisseur ANALOG/SDI", desc:"Convertisseur analogique vers SDI", qte:1, qteDispo:1 },
+	{ ref:"Convertisseur FIBRE", desc:"Convertisseur SDI en fibre optique et fibre optique en SDI.Optical Fiber 12G BlackMagic", qte:2, qteDispo:2 },
+	{ ref:"Convertisseur SYNCRO", desc:"Convertisseur Sync Generator 6 sorties de référence vidéo stabilisées pour synchroniser tout le matériel vidéo BlackMagic", qte:1, qteDispo:1 },
+	{ ref:"Convertisseur RECORDER", desc:"Convertisseur des signaux YUV 3G-SDI, HDMI et analogiques, ainsi que S‑Video et vidéo composite en H264,  H264 Pro Recorder BlackMagic", qte:1, qteDispo:1 },
+	{ ref:"Distributeur", desc:"Distributeur signal SD ou HD-SDI vers 8 sorties SDI, connexions 3G-SDI sorties synchronisées, commutations automatiques entre les formats SD, HD et 1080p60 BlackMagic", qte:5, qteDispo:5 },
+	{ ref:"Web Presenter", desc:"Streaming en direct sur des plateformes, sortie webcam USB, entrée 12G-SDI.Web Presenter BlackMagic", qte:1, qteDispo:1 },
+	{ ref:"Mélangeur HD", desc:"Mélangeur vidéo BlackMagic ATM HD", qte:1, qteDispo:1 },
+	{ ref:"Mélangeur 4K", desc:"Mélangeur vidéo BlackMagic ATM 4K", qte:1, qteDispo:1 },
+	{ ref:"Mélangeur Mini", desc:"Mélangeur vidéo BlackMagic ATEM Mini Pro ISO", qte:1, qteDispo:1 },
+	{ ref:"Mélangeur ATEM", desc:"Mélangeur vidéo BlackMagic A1 TEM 1M/E production studio 4K", qte:1, qteDispo:1 },
+	{ ref:"CONTROL PANEL", desc:"Control Panel est un pupitre de commande pour caméra.Blackmagic control panel", qte:1, qteDispo:1 },
+	{ ref:"Mélangeur ATEM", desc:"Mélangeur vidéo BlackMagic A1 TEM 1M/E production studio 4K", qte:1, qteDispo:1 },
+	{ ref:"Routeur PROs", desc:"Panneau de contrôle du routeur audio-vidéo Vikink X Network 16-ProS CP", qte:1, qteDispo:1 },
+	{ ref:"Router", desc:"Panneau de contrôle du routeur audio-vidéo Vikink X", qte:1, qteDispo:1 },
+	{ ref:"Lumière LED", desc:"Lampes led", qte:2, qteDispo:2 },
+	{ ref:"lumière ROTOLIGHT", desc:"Valise de 4 Rotolight", qte:1, qteDispo:1 },
+	{ ref:"Prompteur", desc:"Prompteur TP 300 pour tablette", qte:1, qteDispo:1 },
+	{ ref:"SDI gris", desc:"Câble SDI gris", qte:40, qteDispo:40 },
+	{ ref:"SDI noir", desc:"Câble SDI noir", qte:12, qteDispo:12 },
+	{ ref:"SDI vert", desc:"Câble SDI vert", qte:10, qteDispo:10 },
+	{ ref:"SDI bleu", desc:"Câble SDI bleu", qte:41, qteDispo:41 },
+	{ ref:"SDI rouge", desc:"Câble SDI rouge", qte:1, qteDispo:1 },
+	{ ref:"Touret SDI", desc:"Touret câble SDI", qte:4, qteDispo:4 },
+	{ ref:"HDMI", desc:"Câble HDMI", qte:11, qteDispo:11 },
+	{ ref:"Data vidéo", desc:"Câble Data Vidéo", qte:6, qteDispo:6 },
+	{ ref:"RJ45", desc:"Câble RJ45", qte:13, qteDispo:13 },
+	{ ref:"Touret RJ45", desc:"Touret câble RJ45 orange", qte:3, qteDispo:3 },
+	{ ref:"Chuko", desc:"Câble alimentation CEE", qte:35, qteDispo:35 },
+	{ ref:"Multiprise", desc:"Quadruplette PC16A", qte:6, qteDispo:6 },	
+  ]
+};
+
+// ─── DEMANDES ENREGISTRÉES (chargées depuis Google Sheets au démarrage) ───
+let DEMANDES = [];
+let DEMANDES_RETOURNEES = []; // demandes dont le retour a été validé
+let currentAdmin = null;
+let currentUser = null;
+let panier = []; // { ref, desc, domaine, qteMax, qteDemandee }
+let selectedReq = null;
+
+// ─── HELPERS ───
+function today() {
+  return new Date().toISOString().split("T")[0];
+}
+function fmtDate(d) {
+  if (!d) return "–";
+  const [y,m,j] = d.split("-");
+  return `${j}/${m}/${y}`;
+}
+function fmtDateTime(date) {
+  const d = date instanceof Date ? date : new Date(date);
+  if (isNaN(d)) return "–";
+  const j  = String(d.getDate()).padStart(2,"0");
+  const mo = String(d.getMonth()+1).padStart(2,"0");
+  const y  = d.getFullYear();
+  const hh = String(d.getHours()).padStart(2,"0");
+  const mm = String(d.getMinutes()).padStart(2,"0");
+  return `${j}/${mo}/${y} à ${hh}:${mm}`;
+}
+function fmtNow() { return fmtDateTime(new Date()); }
+function showToast(msg, duration=2500) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), duration);
+}
+function getDomainKey(domaine) {
+  if (domaine === "Son") return "SON";
+  if (domaine === "Lumière") return "LUMIERE";
+  if (domaine === "Vidéo") return "VIDEO";
+  return "SON";
+}
+function getDomainColor(domaine) {
+  if (domaine === "SON" || domaine === "Son") return "son";
+  if (domaine === "LUMIERE" || domaine === "Lumière") return "lum";
+  if (domaine === "VIDEO" || domaine === "Vidéo") return "vid";
+  return "son";
+}
+
+// ─── COMMUNICATION GOOGLE SHEETS ───
+async function sendToSheet(action, data) {
+  try {
+    const url = CONFIG.SHEET_URL + "?action=" + encodeURIComponent(action) +
+                "&data=" + encodeURIComponent(JSON.stringify(data));
+    const resp = await fetch(url, { method: "GET", mode: "cors" });
+    const json = await resp.json();
+    return json;
+  } catch(e) {
+    console.warn("Google Sheets non connecté :", e);
+    return { ok: false, err: e.message };
+  }
+}
+
+async function loadDemandesFromSheet() {
+  const result = await sendToSheet("getDemandes", {});
+  if (result.ok && result.data) {
+    // Séparer les demandes en cours des demandes retournées (retourValide = true)
+    DEMANDES           = result.data.filter(d => !d.retourValide);
+    DEMANDES_RETOURNEES = result.data.filter(d =>  d.retourValide);
+    refreshAdminView();
+    refreshHistorique();
+  }
+}
+
+async function loadStockFromSheet() {
+  const result = await sendToSheet("getStock", {});
+  if (result.ok && result.data) {
+    // Met à jour les quantités disponibles depuis la feuille STOCK
+    result.data.forEach(row => {
+      Object.values(STOCK).forEach(arr => {
+        const item = arr.find(i => i.ref === row.ref);
+        if (item) item.qteDispo = parseInt(row.qteDispo) || 0;
+      });
+    });
+    refreshStockList();
+  }
+}
+
+// ─── CHARGEMENT ET GESTION DES UTILISATEURS ───
+
+async function loadUtilisateursFromSheet() {
+  const result = await sendToSheet("getUtilisateurs", {});
+  if (result.ok && result.data && result.data.length > 0) {
+    result.data.forEach(nom => {
+      if (!UTILISATEURS.includes(nom)) UTILISATEURS.push(nom);
+    });
+    UTILISATEURS.sort();
+    rebuildUserSelect();
+    refreshFicheSelect();
+  }
+}
+
+// Reconstruit le <select> utilisateur du formulaire demande
+function rebuildUserSelect() {
+  const sel = document.getElementById("u-user");
+  if (!sel) return;
+  const current = sel.value;
+  sel.innerHTML = '<option value="">— Choisir —</option>';
+  UTILISATEURS.forEach(u => {
+    const o = document.createElement("option");
+    o.value = u; o.textContent = u;
+    if (u === current) o.selected = true;
+    sel.appendChild(o);
+  });
+}
+
+// Reconstruit le <select> de la fiche utilisateur
+function refreshFicheSelect() {
+  const sel = document.getElementById("fiche-user-select");
+  if (!sel) return;
+  const current = sel.value;
+  sel.innerHTML = '<option value="">— Choisir un utilisateur —</option>';
+  UTILISATEURS.forEach(u => {
+    const o = document.createElement("option");
+    o.value = u; o.textContent = u;
+    if (u === current) o.selected = true;
+    sel.appendChild(o);
+  });
+}
+
+// ─── ONGLET UTILISATEURS (dans modal Gérer le catalogue) ───
+
+function refreshUsersList() {
+  const listEl = document.getElementById("users-list");
+  listEl.innerHTML = "";
+  if (UTILISATEURS.length === 0) {
+    listEl.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:8px">Aucun utilisateur enregistré</div>';
+    return;
+  }
+  UTILISATEURS.forEach(nom => {
+    const div = document.createElement("div");
+    div.className = "user-manage-item";
+    div.innerHTML = `
+      <span class="umi-name">👤 ${nom}</span>
+      <button class="btn-del-user" onclick="deleteUtilisateur('${nom.replace(/'/g, "\'")}')">🗑 Supprimer</button>
+    `;
+    listEl.appendChild(div);
+  });
+}
+
+async function addUtilisateur() {
+  const input = document.getElementById("new-user-name");
+  const nom   = input.value.trim();
+  if (!nom) { showToast("⚠ Entrez un nom"); return; }
+
+  // Vérifier doublon local
+  if (UTILISATEURS.find(u => u.toLowerCase() === nom.toLowerCase())) {
+    showToast("⚠ Cet utilisateur existe déjà"); return;
+  }
+
+  // Ajouter localement
+  UTILISATEURS.push(nom);
+  UTILISATEURS.sort();
+  input.value = "";
+
+  // Envoyer vers Google Sheets
+  const res = await sendToSheet("addUtilisateur", { nom });
+  showToast(res?.ok ? "✅ Utilisateur ajouté" : "✅ Ajouté localement (hors ligne)");
+  journaliser("UTILISATEUR — AJOUT", "Utilisateur ajouté : " + nom);
+
+  rebuildUserSelect();
+  refreshFicheSelect();
+  refreshUsersList();
+}
+
+async function deleteUtilisateur(nom) {
+  // Vérifier si cet utilisateur a des demandes en cours
+  const enCours = DEMANDES.some(d => d.utilisateur === nom);
+  if (enCours) {
+    showToast("⚠ Impossible : " + nom + " a des demandes en cours");
+    return;
+  }
+  if (!confirm("Supprimer l'utilisateur " + nom + " ?\nSon historique sera conservé.")) return;
+
+  // Supprimer localement
+  const idx = UTILISATEURS.indexOf(nom);
+  if (idx > -1) UTILISATEURS.splice(idx, 1);
+
+  // Envoyer vers Google Sheets
+  const res = await sendToSheet("deleteUtilisateur", { nom });
+  showToast(res?.ok ? "🗑 Utilisateur supprimé" : "🗑 Supprimé localement (hors ligne)");
+  journaliser("UTILISATEUR — SUPPRESSION", "Utilisateur supprimé : " + nom);
+
+  rebuildUserSelect();
+  refreshFicheSelect();
+  refreshUsersList();
+}
+
+// ─── FICHE UTILISATEUR ───
+
+function openFicheUtilisateur() {
+  if (!currentAdmin) { showToast("⚠ Connectez-vous d'abord"); openLogin(); return; }
+  refreshFicheSelect();
+  document.getElementById("fiche-content").style.display      = "none";
+  document.getElementById("fiche-placeholder").style.display  = "block";
+  document.getElementById("modal-fiche-user").classList.remove("hidden");
+}
+
+function closeFicheUtilisateur() {
+  document.getElementById("modal-fiche-user").classList.add("hidden");
+}
+
+async function loadFicheUtilisateur() {
+  const sel = document.getElementById("fiche-user-select");
+  const nom = sel.value;
+  if (!nom) {
+    document.getElementById("fiche-content").style.display     = "none";
+    document.getElementById("fiche-placeholder").style.display = "block";
+    return;
+  }
+
+  showToast("⏳ Chargement de la fiche…", 1500);
+
+  // Essayer depuis Google Sheets d'abord
+  let fiche = null;
+  const res = await sendToSheet("getFicheUtilisateur", { nom });
+  if (res?.ok && res.data) {
+    fiche = res.data;
+  } else {
+    // Calcul local si hors ligne
+    fiche = buildFicheLocale(nom);
+  }
+
+  renderFiche(fiche);
+}
+
+// Calcul de la fiche localement (quand hors ligne)
+function buildFicheLocale(nom) {
+  const maintenant = new Date();
+  maintenant.setHours(0,0,0,0);
+  const toutes = [...DEMANDES, ...DEMANDES_RETOURNEES].filter(d =>
+    d.utilisateur?.toLowerCase() === nom.toLowerCase()
+  );
+  const enCours  = toutes.filter(d => !d.retourValide);
+  const retards  = enCours.filter(d => {
+    if (!d.retour) return false;
+    const dr = new Date(d.retour);
+    dr.setHours(0,0,0,0);
+    return dr < maintenant;
+  });
+  return { nom, totalEmprunts: toutes.length, nbEnCours: enCours.length, nbRetards: retards.length, enCours, retards, historique: toutes };
+}
+
+function renderFiche(fiche) {
+  document.getElementById("fiche-placeholder").style.display = "none";
+  document.getElementById("fiche-content").style.display     = "block";
+
+  // Compteurs
+  document.getElementById("fc-total").textContent   = fiche.totalEmprunts;
+  document.getElementById("fc-encours").textContent = fiche.nbEnCours;
+  document.getElementById("fc-retards").textContent = fiche.nbRetards;
+
+  // Section retards (masquée si aucun)
+  const retardsSection = document.getElementById("fc-retards-section");
+  retardsSection.style.display = fiche.nbRetards > 0 ? "block" : "none";
+
+  // Matériel en cours
+  const enCoursList = document.getElementById("fc-encours-list");
+  enCoursList.innerHTML = "";
+  if (!fiche.enCours || fiche.enCours.length === 0) {
+    enCoursList.innerHTML = '<div class="fiche-empty">Aucun matériel actuellement sorti</div>';
+  } else {
+    fiche.enCours.forEach(d => renderFicheDemande(enCoursList, d, false));
+  }
+
+  // Retards
+  const retardsList = document.getElementById("fc-retards-list");
+  retardsList.innerHTML = "";
+  if (fiche.retards && fiche.retards.length > 0) {
+    fiche.retards.forEach(d => renderFicheDemande(retardsList, d, true));
+  }
+
+  // Historique complet
+  const histoList = document.getElementById("fc-historique-list");
+  histoList.innerHTML = "";
+  if (!fiche.historique || fiche.historique.length === 0) {
+    histoList.innerHTML = '<div class="fiche-empty">Aucun historique disponible</div>';
+  } else {
+    // Plus récent en premier
+    [...fiche.historique].reverse().forEach(d => renderFicheDemande(histoList, d, false, true));
+  }
+}
+
+function renderFicheDemande(container, d, estRetard, avecStatut=false) {
+  const maintenant = new Date(); maintenant.setHours(0,0,0,0);
+  let joursRetard = 0;
+  if (d.retour) {
+    const dr = new Date(d.retour); dr.setHours(0,0,0,0);
+    joursRetard = Math.floor((maintenant - dr) / (1000 * 60 * 60 * 24));
+  }
+
+  const dc = getDomainColor(d.domaine);
+  const refs = (d.lignes||[]).map(l => l.ref + " ×" + l.qteDemandee).join(", ");
+
+  let statutBadge = "";
+  if (avecStatut) {
+    if (d.retourValide) {
+      statutBadge = '<span class="chip chip-ok">✅ Retourné</span>';
+    } else if (joursRetard > 0) {
+      statutBadge = `<span class="chip chip-danger">⏱ ${joursRetard}j retard</span>`;
+    } else {
+      statutBadge = '<span class="chip">En cours</span>';
+    }
+  }
+
+  const div = document.createElement("div");
+  div.className = "fiche-demande-item"
+    + (d.retourValide ? " retourne" : "")
+    + (estRetard || joursRetard > 0 && !d.retourValide ? " retarde" : "");
+  div.innerHTML = `
+    <div class="fdi-header">
+      <div class="fdi-title">
+        <span class="dot dot-${dc}" style="display:inline-block;vertical-align:middle;margin-right:4px"></span>
+        ${d.projet}
+        ${statutBadge}
+      </div>
+      <div style="font-size:11px;color:var(--text3)">
+        ${fmtDate(d.sortie)} → ${fmtDate(d.retour)}
+      </div>
+    </div>
+    <div class="fdi-refs">${refs || "–"}</div>
+    ${d.noteRetour ? `<div style="font-size:11px;color:var(--accent-lum);margin-top:3px">📝 ${d.noteRetour}</div>` : ""}
+  `;
+  container.appendChild(div);
+}
+</script>
+
+<!-- ══════════════════════════════════════════════
+     LOGIN OVERLAY
+     ══════════════════════════════════════════════ -->
+<div id="login-screen" class="hidden">
+  <div class="login-box">
+    <h2>🔐 Espace Administrateur</h2>
+    <p>Identifiez-vous pour accéder à la gestion du stock</p>
+    <div style="margin-bottom:12px">
+      <label>Sélectionner l'administrateur</label>
+      <select id="login-admin-select">
+        <option value="">— Choisir —</option>
+        <option value="0">Dolet Alex — SON</option>
+        <option value="1">Bidaud Luc — LUMIERE</option>
+        <option value="2">Squillace David — VIDEO</option>
+      </select>
+    </div>
+    <div style="margin-bottom:12px">
+      <label>Mot de passe</label>
+      <input type="password" id="login-password" placeholder="Entrez le mot de passe" autocomplete="current-password">
+    </div>
+    <div class="row">
+      <button class="btn btn-outline" onclick="closeLogin()">Annuler</button>
+      <button class="btn btn-primary" onclick="doLogin()">Connexion</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TOAST
+     ══════════════════════════════════════════════ -->
+<div id="toast"></div>
+
+<!-- ══════════════════════════════════════════════
+     MODAL AJOUTER RÉFÉRENCE
+     ══════════════════════════════════════════════ -->
+<div id="modal-ajouter" class="modal-overlay hidden">
+  <div class="modal-box">
+    <h2>➕ Ajouter une référence</h2>
+    <p style="font-size:12px;color:var(--text3);margin-bottom:10px">Références disponibles dans le domaine sélectionné</p>
+    <div class="add-ref-list" id="add-ref-list"></div>
+    <div class="modal-btns">
+      <button class="btn btn-outline" style="flex:1" onclick="closeAjouter()">Annuler</button>
+      <button class="btn btn-primary" style="flex:1" onclick="confirmAjouter()">Ajouter</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     MODAL CHECK-LIST RETOUR
+     ══════════════════════════════════════════════ -->
+<div id="modal-checklist" class="modal-overlay hidden">
+  <div class="modal-box" style="max-width:400px;width:100%">
+    <h2>📦 Check-list Retour</h2>
+    <div id="checklist-header" style="font-size:12px;color:var(--text3);margin-bottom:12px;line-height:1.5"></div>
+
+    <!-- Liste des références à cocher -->
+    <div id="checklist-items" style="max-height:300px;overflow-y:auto;margin-bottom:12px"></div>
+
+    <!-- Barre de progression -->
+    <div style="margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px">
+        <span>Progression du retour</span>
+        <span id="checklist-progress-txt">0 / 0</span>
+      </div>
+      <div style="background:var(--surface2);border-radius:20px;height:8px;overflow:hidden">
+        <div id="checklist-progress-bar" style="height:100%;width:0%;background:var(--success);border-radius:20px;transition:width .3s ease"></div>
+      </div>
+    </div>
+
+    <!-- Note optionnelle -->
+    <div style="margin-bottom:14px">
+      <label>Note de retour (optionnel)</label>
+      <input type="text" id="checklist-note" placeholder="Ex : câble manquant, matériel endommagé…">
+    </div>
+
+    <div class="modal-btns">
+      <button class="btn btn-outline" style="flex:1" onclick="closeChecklist()">Annuler</button>
+      <button class="btn btn-success" style="flex:1" id="btn-valider-retour" onclick="validerRetour()">✅ Valider le retour</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     MODAL GÉRER LE CATALOGUE
+     ══════════════════════════════════════════════ -->
+<div id="modal-manage-stock" class="modal-overlay hidden">
+  <div class="modal-box-wide">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <h2 style="margin:0">⚙️ Gérer le catalogue</h2>
+      <button onclick="closeManageStock()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text3)">✕</button>
+    </div>
+
+    <!-- Onglets : Ajouter / Modifier / Supprimer / Utilisateurs -->
+    <div class="stock-manage-tabs">
+      <button class="smt-btn active" id="smt-add"   onclick="switchManageTab('add')">➕ Ajouter</button>
+      <button class="smt-btn"        id="smt-edit"  onclick="switchManageTab('edit')">✏️ Modifier</button>
+      <button class="smt-btn"        id="smt-del"   onclick="switchManageTab('del')">🗑 Supprimer</button>
+      <button class="smt-btn"        id="smt-users" onclick="switchManageTab('users')">👥 Utilisateurs</button>
+    </div>
+
+    <!-- ── ONGLET AJOUTER ── -->
+    <div class="manage-panel active" id="panel-add">
+      <div class="form-group">
+        <label>Domaine</label>
+        <select id="new-domaine">
+          <option value="SON">🔊 Son</option>
+          <option value="LUMIERE">💡 Lumière</option>
+          <option value="VIDEO">🎬 Vidéo</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Code référence</label>
+        <input type="text" id="new-ref" placeholder="Ex : SON-009" style="text-transform:uppercase">
+      </div>
+      <div class="form-group">
+        <label>Descriptif</label>
+        <input type="text" id="new-desc" placeholder="Ex : Câble XLR 10m (pack x5)">
+      </div>
+      <div class="row">
+        <div class="form-group">
+          <label>Quantité totale</label>
+          <input type="number" id="new-qte" min="1" value="1" style="width:100%">
+        </div>
+        <div class="form-group">
+          <label>Qté disponible</label>
+          <input type="number" id="new-qtedispo" min="0" value="1" style="width:100%">
+        </div>
+      </div>
+      <button class="btn btn-primary btn-block" onclick="addReference()" style="margin-top:4px">➕ Ajouter la référence</button>
+    </div>
+
+    <!-- ── ONGLET MODIFIER ── -->
+    <div class="manage-panel" id="panel-edit">
+      <div class="form-group">
+        <label>Filtrer par domaine</label>
+        <select id="edit-filter-domaine" onchange="refreshManageList('edit')">
+          <option value="">Tous</option>
+          <option value="SON">🔊 Son</option>
+          <option value="LUMIERE">💡 Lumière</option>
+          <option value="VIDEO">🎬 Vidéo</option>
+        </select>
+      </div>
+      <div id="edit-ref-list" style="max-height:320px;overflow-y:auto"></div>
+
+      <!-- Formulaire d'édition (caché par défaut) -->
+      <div id="edit-form" style="display:none;margin-top:12px;padding:12px;background:var(--surface2);border-radius:var(--radius-sm)">
+        <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:8px">
+          Modifier : <span id="edit-form-ref" style="color:#5A3FA0"></span>
+        </div>
+        <div class="form-group">
+          <label>Descriptif</label>
+          <input type="text" id="edit-desc">
+        </div>
+        <div class="row">
+          <div class="form-group">
+            <label>Quantité totale</label>
+            <input type="number" id="edit-qte" min="1" style="width:100%">
+          </div>
+          <div class="form-group">
+            <label>Qté disponible</label>
+            <input type="number" id="edit-qtedispo" min="0" style="width:100%">
+          </div>
+        </div>
+        <div class="row" style="margin-top:4px">
+          <button class="btn btn-outline btn-sm" onclick="cancelEdit()">Annuler</button>
+          <button class="btn btn-primary btn-sm" onclick="saveEdit()">💾 Enregistrer</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ONGLET SUPPRIMER ── -->
+    <div class="manage-panel" id="panel-del">
+      <div class="form-group">
+        <label>Filtrer par domaine</label>
+        <select id="del-filter-domaine" onchange="refreshManageList('del')">
+          <option value="">Tous</option>
+          <option value="SON">🔊 Son</option>
+          <option value="LUMIERE">💡 Lumière</option>
+          <option value="VIDEO">🎬 Vidéo</option>
+        </select>
+      </div>
+      <div id="del-ref-list" style="max-height:360px;overflow-y:auto"></div>
+    </div>
+
+    <!-- ── ONGLET UTILISATEURS ── -->
+    <div class="manage-panel" id="panel-users">
+      <!-- Ajouter un utilisateur -->
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <input type="text" id="new-user-name" placeholder="Prénom Nom de l'utilisateur" style="flex:1">
+        <button class="btn btn-primary btn-sm" onclick="addUtilisateur()" style="white-space:nowrap">➕ Ajouter</button>
+      </div>
+      <!-- Liste des utilisateurs -->
+      <div class="section-label">Utilisateurs enregistrés</div>
+      <div id="users-list" style="max-height:360px;overflow-y:auto;margin-top:6px"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     MODAL FICHE UTILISATEUR
+     ══════════════════════════════════════════════ -->
+<div id="modal-fiche-user" class="modal-overlay hidden">
+  <div class="modal-box-wide" style="max-width:500px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <h2 style="margin:0">👤 Fiche Utilisateur</h2>
+      <button onclick="closeFicheUtilisateur()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text3)">✕</button>
+    </div>
+
+    <!-- Sélecteur utilisateur -->
+    <div class="form-group" style="margin-bottom:14px">
+      <label>Sélectionner un utilisateur</label>
+      <select id="fiche-user-select" onchange="loadFicheUtilisateur()">
+        <option value="">— Choisir un utilisateur —</option>
+      </select>
+    </div>
+
+    <!-- Contenu de la fiche (affiché après sélection) -->
+    <div id="fiche-content" style="display:none">
+
+      <!-- Compteurs -->
+      <div class="stat-cards">
+        <div class="stat-card">
+          <div class="sc-val sc-emprunts" id="fc-total">0</div>
+          <div class="sc-lbl">Total emprunts</div>
+        </div>
+        <div class="stat-card">
+          <div class="sc-val sc-encours" id="fc-encours">0</div>
+          <div class="sc-lbl">En cours</div>
+        </div>
+        <div class="stat-card">
+          <div class="sc-val sc-retards" id="fc-retards">0</div>
+          <div class="sc-lbl">Retards</div>
+        </div>
+      </div>
+
+      <!-- Matériel actuellement sorti -->
+      <div class="fiche-section">
+        <div class="fiche-section-title">📤 Matériel actuellement sorti</div>
+        <div id="fc-encours-list"></div>
+      </div>
+
+      <!-- Retards -->
+      <div class="fiche-section" id="fc-retards-section">
+        <div class="fiche-section-title" style="color:var(--danger)">⏱ Retards constatés</div>
+        <div id="fc-retards-list"></div>
+      </div>
+
+      <!-- Historique complet -->
+      <div class="fiche-section">
+        <div class="fiche-section-title">📋 Historique complet</div>
+        <div id="fc-historique-list" style="max-height:280px;overflow-y:auto"></div>
+      </div>
+
+    </div>
+
+    <!-- État vide avant sélection -->
+    <div id="fiche-placeholder" style="text-align:center;padding:24px 0;color:var(--text3);font-size:13px">
+      Sélectionnez un utilisateur pour afficher sa fiche
+    </div>
+
+    <button class="btn btn-outline btn-block btn-sm" style="margin-top:12px" onclick="closeFicheUtilisateur()">Fermer</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     MODAL CHANGER MOT DE PASSE
+     ══════════════════════════════════════════════ -->
+<div id="modal-chg-pwd" class="modal-overlay hidden">
+  <div class="modal-box" style="max-width:360px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <h2 style="margin:0">🔑 Changer mon mot de passe</h2>
+      <button onclick="closeChangerMdp()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text3)">✕</button>
+    </div>
+    <div id="pwd-admin-info" style="font-size:12px;color:var(--text2);margin-bottom:14px;padding:8px 10px;background:var(--surface2);border-radius:var(--radius-sm)"></div>
+
+    <div class="form-group">
+      <label>Mot de passe actuel</label>
+      <input type="password" id="pwd-actuel" placeholder="Entrez votre mot de passe actuel" autocomplete="current-password">
+    </div>
+    <div class="form-group">
+      <label>Nouveau mot de passe</label>
+      <input type="password" id="pwd-nouveau" placeholder="6 caractères minimum" autocomplete="new-password" oninput="evaluerMdp()">
+      <div class="pwd-strength" id="pwd-strength-bar"></div>
+      <div class="pwd-hint" id="pwd-hint"></div>
+    </div>
+    <div class="form-group">
+      <label>Confirmer le nouveau mot de passe</label>
+      <input type="password" id="pwd-confirmer" placeholder="Répétez le nouveau mot de passe" autocomplete="new-password">
+    </div>
+
+    <div class="modal-btns">
+      <button class="btn btn-outline" style="flex:1" onclick="closeChangerMdp()">Annuler</button>
+      <button class="btn btn-primary" style="flex:1" onclick="changerMotDePasse()">✅ Valider</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     MODAL JOURNAL DE CONNEXION
+     ══════════════════════════════════════════════ -->
+<div id="modal-journal" class="modal-overlay hidden">
+  <div class="modal-box-wide" style="max-width:520px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <h2 style="margin:0">📒 Journal de connexion</h2>
+      <button onclick="closeJournal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text3)">✕</button>
+    </div>
+
+    <!-- Filtres -->
+    <div class="row" style="margin-bottom:12px">
+      <div>
+        <label>Filtre action</label>
+        <select id="journal-filter-action" onchange="filtrerJournal()">
+          <option value="">Toutes</option>
+          <option value="CONNEXION">Connexions</option>
+          <option value="DÉCONNEXION">Déconnexions</option>
+          <option value="CHANGEMENT MDP">Changements MDP</option>
+          <option value="RETOUR">Retours</option>
+          <option value="STOCK">Stock</option>
+          <option value="EXPORT">Exports</option>
+        </select>
+      </div>
+      <div>
+        <label>Filtre admin</label>
+        <select id="journal-filter-admin" onchange="filtrerJournal()">
+          <option value="">Tous</option>
+          <option value="Dolet Alex">Dolet Alex</option>
+          <option value="Bidaud Luc">Bidaud Luc</option>
+          <option value="Squillace David">Squillace David</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="journal-list" style="max-height:420px;overflow-y:auto"></div>
+
+    <div style="margin-top:10px;font-size:11px;color:var(--text3);text-align:center">
+      50 dernières entrées · mis à jour en temps réel depuis Google Sheets
+    </div>
+    <button class="btn btn-outline btn-block btn-sm" style="margin-top:10px" onclick="closeJournal()">Fermer</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     AUTHENTIFICATION
+     ══════════════════════════════════════════════ -->
+<div id="auth-screen" class="auth-screen active">
+  <div class="auth-card">
+    <div class="auth-header">
+      <span class="auth-icon">🔐</span>
+      <h1>Gestionnaire</h1>
+      <p>DNMADE Daunot</p>
+    </div>
+    
+    <div class="auth-tabs">
+      <button class="auth-tab-btn active" onclick="switchAuthTab('login')">Connexion</button>
+      <button class="auth-tab-btn" onclick="switchAuthTab('register')">Inscription</button>
+    </div>
+
+    <!-- ─── FORMULAIRE CONNEXION ─── -->
+    <form id="form-login" class="auth-form active" onsubmit="submitLogin(event)">
+      <div class="form-group-auth">
+        <label>Utilisateur</label>
+        <select id="login-username" required>
+          <option value="">Sélectionner un utilisateur...</option>
+        </select>
+      </div>
+
+      <div class="form-group-auth">
+        <label>Mot de passe</label>
+        <input type="password" id="login-password" required>
+      </div>
+
+      <button type="submit" class="btn-auth btn-auth-primary">✅ Se connecter</button>
+      <div id="login-message" class="auth-message"></div>
+    </form>
+
+    <!-- ─── FORMULAIRE INSCRIPTION ─── -->
+    <form id="form-register" class="auth-form" onsubmit="submitRegister(event)">
+      <div class="form-group-auth">
+        <label>Nom d'utilisateur</label>
+        <input type="text" id="register-username" required 
+               placeholder="ex. Alice Martin">
+      </div>
+
+      <div class="form-group-auth">
+        <label>Email (optionnel)</label>
+        <input type="email" id="register-email" 
+               placeholder="alice@example.com">
+      </div>
+
+      <div class="form-group-auth">
+        <label>Mot de passe</label>
+        <input type="password" id="register-password" required 
+               oninput="checkPasswordStrength()">
+        
+        <div class="password-strength">
+          <div class="strength-bar">
+            <div id="strength-fill" class="strength-fill"></div>
+          </div>
+          <div id="criteria-list" class="criteria-list">
+            <div class="criteria-item" id="crit-length">
+              <span class="criteria-icon">○</span> 8 caractères minimum
+            </div>
+            <div class="criteria-item" id="crit-upper">
+              <span class="criteria-icon">○</span> 1 majuscule (A-Z)
+            </div>
+            <div class="criteria-item" id="crit-lower">
+              <span class="criteria-icon">○</span> 1 minuscule (a-z)
+            </div>
+            <div class="criteria-item" id="crit-number">
+              <span class="criteria-icon">○</span> 1 chiffre (0-9)
+            </div>
+            <div class="criteria-item" id="crit-special">
+              <span class="criteria-icon">○</span> 1 symbole (!@#$%^&*)
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group-auth">
+        <label>Confirmer le mot de passe</label>
+        <input type="password" id="register-confirm" required>
+      </div>
+
+      <button type="submit" class="btn-auth btn-auth-primary" id="btn-register-submit">📝 S'inscrire</button>
+      <div id="register-message" class="auth-message"></div>
+    </form>
+
+    <div class="auth-footer">
+      Démarrage du gestionnaire DNMADE Daunot v2.0
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     APP
+     ══════════════════════════════════════════════ -->
+<div id="app">
+  <div class="app-header">
+    <h1>📦 Gestionnaire DNMADE Daunot</h1>
+    <div class="user-menu">
+      <span class="user-info" id="header-username">Utilisateur</span>
+      <button class="user-menu btn-secondary" onclick="showChangePasswordModal()">🔐 Changer MDP</button>
+      <button class="user-menu btn-secondary" onclick="logoutUser()">🚪 Déconnexion</button>
+      <span class="badge" id="header-badge">Stock</span>
+    </div>
+  </div>
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="switchTab('user')" id="tab-user">Demande</button>
+    <button class="tab-btn" onclick="switchTab('admin')" id="tab-admin">Admin</button>
+    <button class="tab-btn" onclick="switchTab('historique')" id="tab-histo">Historique</button>
+  </div>
+
+  <!-- ════════════════════════════════════════
+       ÉCRAN UTILISATEUR — DEMANDE D'UTILISATEUR
+       ════════════════════════════════════════ -->
+  <div class="screen active" id="screen-user">
+    <div class="user-content">
+      <!-- LIGNE 1 : utilisateur / projet / domaine -->
+      <div class="row">
+        <div>
+          <label>Utilisateur</label>
+          <select id="u-user">
+            <option value="">— Choisir —</option>
+          </select>
+        </div>
+        <div>
+          <label>Projet</label>
+          <input type="text" id="u-projet" placeholder="Nom du projet">
+        </div>
+        <div>
+          <label>Domaine</label>
+          <select id="u-domaine" onchange="onDomaineChange()">
+            <option value="Son">🔊 Son</option>
+            <option value="Lumière">💡 Lumière</option>
+            <option value="Vidéo">🎬 Vidéo</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- LIGNE 2 : dates -->
+      <div class="row">
+        <div>
+          <label>Date de sortie</label>
+          <input type="date" id="u-date-sortie" value="">
+        </div>
+        <div>
+          <label>Date de retour</label>
+          <input type="date" id="u-date-retour" value="">
+        </div>
+      </div>
+
+      <!-- ZONE PRINCIPALE : liste + descriptif -->
+      <div class="main-area">
+        <!-- Colonne liste -->
+        <div class="list-col">
+          <div class="section-label">Références disponibles</div>
+          <div class="panel" style="padding:8px 10px;">
+            <div class="stock-list" id="stock-list"></div>
+          </div>
+        </div>
+        <!-- Colonne descriptif -->
+        <div class="desc-col">
+          <div class="section-label">Descriptif</div>
+          <div class="panel" style="max-height:140px;overflow-y:auto;">
+            <div id="desc-panel">Cliquez sur une référence pour voir son descriptif.</div>
+          </div>
+          <!-- Panier résumé -->
+          <div class="section-label" style="margin-top:6px">Sélection</div>
+          <div class="panel" style="overflow-y:auto;max-height:90px;padding:6px 10px;">
+            <div id="panier-summary" style="font-size:11px;color:var(--text3)">Aucun article sélectionné</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- VALIDER ET IMPRIMER -->
+      <button class="btn-print" onclick="validerEtImprimer()">🖨️ VALIDER ET IMPRIMER</button>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════
+       ÉCRAN ADMINISTRATEUR
+       ════════════════════════════════════════ -->
+  <div class="screen" id="screen-admin">
+    <div class="user-content">
+      <!-- Header admin -->
+      <div class="row" style="align-items:center">
+        <div style="flex:1">
+          <label>Administrateur connecté</label>
+          <div id="admin-nom-display" style="font-weight:700;font-size:14px;color:var(--accent)">— Non connecté —</div>
+        </div>
+        <div style="flex:none">
+          <button class="btn btn-outline btn-sm" onclick="openLogin()">🔐 Connexion</button>
+          <button class="btn btn-sm" style="background:var(--surface2);color:var(--text2);margin-left:4px" onclick="logout()">Déconn.</button>
+        </div>
+      </div>
+
+      <!-- Infos demande sélectionnée -->
+      <div class="panel" style="padding:8px 12px">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+          <div><div class="section-label">Utilisateur</div><div id="a-user" style="font-size:12px;font-weight:600">–</div></div>
+          <div><div class="section-label">Projet</div><div id="a-projet" style="font-size:12px;font-weight:600">–</div></div>
+          <div><div class="section-label">Domaine</div><div id="a-domaine" style="font-size:12px;font-weight:600">–</div></div>
+          <div><div class="section-label">Demande</div><div id="a-date-demande" style="font-size:12px">–</div></div>
+          <div><div class="section-label">Sortie</div><div id="a-date-sortie" style="font-size:12px">–</div></div>
+          <div><div class="section-label">Retour</div><div id="a-date-retour" style="font-size:12px">–</div></div>
+        </div>
+      </div>
+
+      <!-- Liste des demandes -->
+      <div style="flex:none">
+        <div class="section-label">Demandes enregistrées</div>
+        <div id="admin-req-list" style="overflow-x:auto;display:flex;gap:8px;padding-bottom:4px;overflow-y:hidden">
+          <div style="font-size:12px;color:var(--text3)">Aucune demande</div>
+        </div>
+      </div>
+
+      <!-- Détail de la demande -->
+      <div class="section-label">Références de la demande</div>
+      <div class="panel" style="max-height:200px;overflow-y:auto;padding:6px 10px;">
+        <div id="admin-refs-list" style="font-size:12px;color:var(--text3)">Sélectionnez une demande</div>
+      </div>
+
+      <!-- CHECK-LIST RETOUR -->
+      <button class="btn-checklist" id="btn-checklist" onclick="openChecklist()" disabled>
+        📦 CHECK-LIST RETOUR
+      </button>
+
+      <!-- GÉRER LE STOCK -->
+      <button class="btn-manage" onclick="openManageStock()">⚙️ GÉRER LE CATALOGUE</button>
+
+      <!-- FICHE UTILISATEUR -->
+      <button class="btn-fiche" onclick="openFicheUtilisateur()">👤 FICHE UTILISATEUR</button>
+
+      <!-- CHANGER MOT DE PASSE -->
+      <button class="btn btn-outline btn-block" id="btn-chg-pwd" onclick="openChangerMdp()" style="border-color:#8B5CF6;color:#8B5CF6;font-weight:700;padding:10px">🔑 CHANGER MON MOT DE PASSE</button>
+
+      <!-- JOURNAL -->
+      <button class="btn-journal" onclick="openJournal()">📒 JOURNAL DE CONNEXION</button>
+
+      <!-- ALERTES RETARD -->
+      <button class="btn-alerte" id="btn-alerte-retard" onclick="envoyerAlertesRetard()">
+        📧 ENVOYER LES ALERTES RETARD <span id="badge-retard" class="badge-retard-count" style="display:none">0</span>
+      </button>
+
+      <!-- VALIDER ET IMPRIMER -->
+      <button class="btn-print" onclick="adminValiderEtImprimer()">🖨️ VALIDER ET IMPRIMER</button>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════
+       ÉCRAN HISTORIQUE
+       ════════════════════════════════════════ -->
+  <div class="screen" id="screen-historique">
+    <div class="user-content">
+      <!-- Header historique -->
+      <div class="row" style="align-items:center">
+        <div style="flex:1">
+          <div id="histo-admin-name" style="font-weight:700;font-size:14px;color:var(--accent)">— Administrateur —</div>
+          <div id="histo-date" style="font-size:11px;color:var(--text3)"></div>
+        </div>
+        <div>
+          <button class="btn btn-outline btn-sm" onclick="exportXLSX()" style="border-color:#2AA87E;color:#2AA87E;font-weight:700">⬇ Export XLSX</button>
+        </div>
+      </div>
+
+      <!-- Filtres -->
+      <div class="row">
+        <div>
+          <label>Filtre domaine</label>
+          <select id="histo-filter-domaine" onchange="refreshHistorique()">
+            <option value="">Tous</option>
+            <option value="Son">Son</option>
+            <option value="Lumière">Lumière</option>
+            <option value="Vidéo">Vidéo</option>
+          </select>
+        </div>
+        <div>
+          <label>Filtre utilisateur</label>
+          <input type="text" id="histo-filter-user" placeholder="Rechercher..." oninput="refreshHistorique()">
+        </div>
+      </div>
+
+      <!-- Synthèse stock -->
+      <div class="section-label">État du stock — Manquants</div>
+      <div class="panel" style="padding:8px 12px;overflow-x:auto;flex-shrink:0">
+        <div id="histo-manquants" style="font-size:12px;color:var(--text3)">Calculé depuis les demandes en cours</div>
+      </div>
+
+      <!-- Table historique -->
+      <div class="section-label">Historique des demandes (1 Jan → 31 Déc)</div>
+      <div class="hist-table-wrap">
+        <table id="histo-table">
+          <thead>
+            <tr>
+              <th>Date demande</th>
+              <th>Utilisateur</th>
+              <th>Projet</th>
+              <th>Domaine</th>
+              <th>Référence</th>
+              <th>Descriptif</th>
+              <th>Qté</th>
+              <th>Sortie</th>
+              <th>Retour</th>
+              <th>Manquant ?</th>
+              <th>Note retour</th>
+            </tr>
+          </thead>
+          <tbody id="histo-body"></tbody>
+        </table>
+      </div>
+
+      <!-- IMPRIMER -->
+      <button class="btn-print" onclick="histoImprimer()">🖨️ Imprimer l'état du stock</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     JAVASCRIPT PRINCIPAL
+     ══════════════════════════════════════════════ -->
+<script>
+// ─── INIT ───
+window.addEventListener("DOMContentLoaded", () => {
+  // Remplir la liste des utilisateurs (depuis les données locales initiales)
+  rebuildUserSelect();
+  refreshFicheSelect();
+
+  // Dates par défaut
+  document.getElementById("u-date-sortie").value = today();
+  document.getElementById("u-date-retour").value = today();
+
+  // Charger stock, demandes, utilisateurs et mots de passe depuis Google Sheets
+  loadStockFromSheet();
+  loadDemandesFromSheet();
+  loadUtilisateursFromSheet();
+  loadPasswordsFromSheet();
+
+  // Affichage initial
+  onDomaineChange();
+  updateHistoDate();
+});
+
+// ─── TABS ───
+function switchTab(tab) {
+  ["user","admin","historique"].forEach(t => {
+    document.getElementById("screen-" + t).classList.remove("active");
+    document.getElementById("tab-" + (t==="historique"?"histo":t==="user"?"user":"admin")).classList.remove("active");
+  });
+  document.getElementById("screen-" + tab).classList.add("active");
+  const tabId = tab === "historique" ? "histo" : tab;
+  document.getElementById("tab-" + tabId).classList.add("active");
+
+  if ((tab === "admin" || tab === "historique") && !currentAdmin) {
+    openLogin();
+  }
+  if (tab === "historique") {
+    refreshHistorique();
+  }
+  if (tab === "admin") {
+    refreshAdminView();
+  }
+}
+
+// ─── LOGIN ───
+function openLogin() {
+  document.getElementById("login-screen").classList.remove("hidden");
+  document.getElementById("login-password").value = "";
+}
+function closeLogin() {
+  document.getElementById("login-screen").classList.add("hidden");
+}
+function doLogin() {
+  const idx = parseInt(document.getElementById("login-admin-select").value);
+  const pwd = document.getElementById("login-password").value;
+  if (isNaN(idx) || document.getElementById("login-admin-select").value === "") {
+    showToast("⚠ Sélectionnez un administrateur"); return;
+  }
+  const admin     = ADMINS[idx];
+  const mdpValide = PASSWORDS[admin.domaine] || admin.password;
+
+  if (pwd !== mdpValide) {
+    // Journaliser la tentative échouée (sans currentAdmin, envoi direct)
+    sendToSheet("logAction", {
+      adminNom:   admin.nom,
+      domaine:    admin.domaine,
+      action:     "TENTATIVE CONNEXION ÉCHOUÉE",
+      detail:     "Mot de passe incorrect",
+      navigateur: navigator.userAgent.substring(0, 80)
+    });
+    showToast("❌ Mot de passe incorrect"); return;
+  }
+
+  currentAdmin = admin;
+  document.getElementById("admin-nom-display").textContent = admin.nom + " — " + admin.domaine;
+  document.getElementById("histo-admin-name").textContent  = admin.nom + " — " + admin.domaine;
+  document.getElementById("header-badge").textContent      = admin.domaine;
+  closeLogin();
+  refreshAdminView();
+  refreshHistorique();
+  showToast("✅ Bienvenue, " + admin.nom);
+
+  // Journaliser la connexion réussie
+  journaliser("CONNEXION", "Connexion réussie — " + admin.nom);
+}
+
+function logout() {
+  if (currentAdmin) {
+    journaliser("DÉCONNEXION", "Déconnexion de " + currentAdmin.nom);
+  }
+  currentAdmin = null;
+  document.getElementById("admin-nom-display").textContent = "— Non connecté —";
+  document.getElementById("histo-admin-name").textContent  = "— Administrateur —";
+  document.getElementById("header-badge").textContent      = "Stock";
+  showToast("Déconnecté");
+}
+
+// ─── DOMAINE CHANGE ───
+function onDomaineChange() {
+  const domaine = document.getElementById("u-domaine").value;
+  refreshStockList();
+}
+
+// ─── STOCK LIST ───
+function refreshStockList() {
+  const domaine = document.getElementById("u-domaine").value;
+  const key = getDomainKey(domaine);
+  const list = document.getElementById("stock-list");
+  list.innerHTML = "";
+
+  const items = STOCK[key] || [];
+  items.forEach(item => {
+    const inPanier = panier.find(p => p.ref === item.ref);
+    const qteDemandee = inPanier ? inPanier.qteDemandee : 0;
+    const dispo = item.qteDispo;
+    let cls = dispo > 3 ? "dispo-ok" : dispo > 0 ? "dispo-low" : "dispo-zero";
+
+    const div = document.createElement("div");
+    div.className = "stock-item";
+    div.innerHTML = `
+      <div class="stock-ref" onclick="showDesc('${item.ref}','${key}')" style="cursor:pointer">
+        <div class="ref-name">${item.ref}</div>
+        <div class="ref-dispo ${cls}">${dispo} dispo.</div>
+      </div>
+      <div class="qty-ctrl">
+        <button class="qty-btn" onclick="changeQty('${item.ref}','${key}',-1)">−</button>
+        <span class="qty-val" id="qv-${item.ref}">${qteDemandee}</span>
+        <button class="qty-btn" onclick="changeQty('${item.ref}','${key}',1)">+</button>
+      </div>
+    `;
+    list.appendChild(div);
+  });
+}
+
+function showDesc(ref, key) {
+  const item = STOCK[key].find(i => i.ref === ref);
+  if (!item) return;
+  document.getElementById("desc-panel").innerHTML = `
+    <strong style="font-size:12px;color:var(--text)">${item.ref}</strong><br>
+    <span style="color:var(--text2)">${item.desc}</span><br><br>
+    <span class="chip ${item.qteDispo > 3 ? 'chip-ok' : item.qteDispo > 0 ? 'chip-warn' : 'chip-danger'}">${item.qteDispo} en stock</span>
+    <span class="chip" style="margin-left:4px">Total : ${item.qte}</span>
+  `;
+}
+
+function changeQty(ref, key, delta) {
+  const item = STOCK[key].find(i => i.ref === ref);
+  if (!item) return;
+  let p = panier.find(p => p.ref === ref);
+  if (!p) {
+    p = { ref, desc: item.desc, domaine: key, qteMax: item.qteDispo, qteDemandee: 0 };
+    panier.push(p);
+  }
+  p.qteDemandee = Math.max(0, Math.min(p.qteMax, p.qteDemandee + delta));
+  if (p.qteDemandee === 0) panier = panier.filter(x => x.ref !== ref);
+
+  const el = document.getElementById("qv-" + ref);
+  if (el) el.textContent = p.qteDemandee > 0 ? p.qteDemandee : 0;
+  refreshPanierSummary();
+  showDesc(ref, key);
+}
+
+function refreshPanierSummary() {
+  const el = document.getElementById("panier-summary");
+  if (panier.length === 0) {
+    el.innerHTML = `<span style="color:var(--text3)">Aucun article sélectionné</span>`;
+    return;
+  }
+  el.innerHTML = panier.map(p =>
+    `<div style="display:flex;justify-content:space-between;border-bottom:1px solid var(--surface2);padding:2px 0">
+      <span style="font-weight:600">${p.ref}</span>
+      <span style="color:var(--accent);font-weight:700">×${p.qteDemandee}</span>
+    </div>`
+  ).join("");
+}
+
+// ─── MODAL AJOUTER ───
+function openAjouter() {
+  const domaine = document.getElementById("u-domaine").value;
+  const key = getDomainKey(domaine);
+  const list = document.getElementById("add-ref-list");
+  list.innerHTML = "";
+  STOCK[key].forEach(item => {
+    const checked = panier.find(p => p.ref === item.ref) ? "checked" : "";
+    const div = document.createElement("div");
+    div.className = "add-ref-item";
+    div.innerHTML = `
+      <label class="checkbox-label">
+        <input type="checkbox" ${checked} id="cb-${item.ref}" onchange="toggleRefInPanier('${item.ref}','${key}')">
+        <span><strong>${item.ref}</strong> — ${item.desc.substring(0,40)}...</span>
+      </label>
+      <span class="chip ${item.qteDispo>3?'chip-ok':item.qteDispo>0?'chip-warn':'chip-danger'}">${item.qteDispo}</span>
+    `;
+    list.appendChild(div);
+  });
+  document.getElementById("modal-ajouter").classList.remove("hidden");
+}
+function closeAjouter() {
+  document.getElementById("modal-ajouter").classList.add("hidden");
+}
+function confirmAjouter() {
+  closeAjouter();
+  refreshStockList();
+  refreshPanierSummary();
+  showToast("Références mises à jour");
+}
+function toggleRefInPanier(ref, key) {
+  const cb = document.getElementById("cb-" + ref);
+  const item = STOCK[key].find(i => i.ref === ref);
+  if (cb.checked) {
+    if (!panier.find(p => p.ref === ref)) {
+      panier.push({ ref, desc: item.desc, domaine: key, qteMax: item.qteDispo, qteDemandee: 1 });
+    }
+  } else {
+    panier = panier.filter(p => p.ref !== ref);
+  }
+}
+
+// ─── VALIDER ET IMPRIMER (UTILISATEUR) ───
+async function validerEtImprimer() {
+  const user = document.getElementById("u-user").value;
+  const projet = document.getElementById("u-projet").value;
+  const domaine = document.getElementById("u-domaine").value;
+  const sortie = document.getElementById("u-date-sortie").value;
+  const retour = document.getElementById("u-date-retour").value;
+
+  if (!user) { showToast("⚠ Sélectionnez un utilisateur"); return; }
+  if (!projet) { showToast("⚠ Entrez le nom du projet"); return; }
+  if (panier.length === 0) { showToast("⚠ Aucun article sélectionné"); return; }
+  if (!sortie || !retour) { showToast("⚠ Sélectionnez les dates"); return; }
+
+  const dateDemande = today();
+
+  // Préparer les lignes de données
+  const rows = panier.map(p => ({
+    dateDemande, nomProjet: projet, utilisateur: user,
+    reference: p.ref, descriptif: p.desc, quantite: p.qteDemandee,
+    etatStock: STOCK[getDomainKey(domaine)].find(i=>i.ref===p.ref)?.qteDispo || 0,
+    dateSortie: sortie, dateRetour: retour, domaine
+  }));
+
+  // Enregistrement en local
+  const demande = { id: Date.now(), dateDemande, utilisateur: user, projet, domaine, sortie, retour, lignes: panier.map(p=>({...p})) };
+  DEMANDES.push(demande);
+
+  // Mise à jour des stocks locaux
+  panier.forEach(p => {
+    const key = getDomainKey(domaine);
+    const item = STOCK[key].find(i => i.ref === p.ref);
+    if (item) item.qteDispo = Math.max(0, item.qteDispo - p.qteDemandee);
+  });
+
+  // Envoyer vers Google Sheets
+  const res = await sendToSheet("addDemande", rows);
+  if (res && res.ok) {
+    showToast("✅ Demande envoyée vers Google Sheets");
+  } else {
+    showToast("⚠ Hors ligne — données sauvegardées localement");
+  }
+  journaliser("VALIDATION DEMANDE", "Demande de " + user + " — " + projet + " (" + domaine + ")");
+  const html = buildPrintHTML({ dateDemande, user, projet, domaine, sortie, retour, lignes: panier });
+  printInNewWindow(html);
+
+  // Archiver le bon en PDF dans Google Drive
+  archiverBonDrive({
+    type:        "DEMANDE",
+    utilisateur: user,
+    projet,
+    domaine,
+    date:        dateDemande,
+    htmlContent: html
+  });
+
+  // Réinitialiser
+  panier = [];
+  refreshStockList();
+  refreshPanierSummary();
+  refreshAdminView();
+  refreshHistorique();
+}
+
+// ─── VALIDER ET IMPRIMER (ADMIN) ───
+function adminValiderEtImprimer() {
+  if (!currentAdmin) { showToast("⚠ Connectez-vous d'abord"); openLogin(); return; }
+  if (!selectedReq) { showToast("⚠ Sélectionnez une demande"); return; }
+  const r = selectedReq;
+  const html = buildPrintHTML({ dateDemande: r.dateDemande, user: r.utilisateur, projet: r.projet, domaine: r.domaine, sortie: r.sortie, retour: r.retour, lignes: r.lignes });
+  printInNewWindow(html);
+}
+
+// ─── ADMIN VIEW ───
+function refreshAdminView() {
+  const list = document.getElementById("admin-req-list");
+  list.innerHTML = "";
+
+  if (DEMANDES.length === 0) {
+    list.innerHTML = `<div style="font-size:12px;color:var(--text3)">Aucune demande</div>`;
+    updateBadgeRetard(0);
+    return;
+  }
+
+  const maintenant = new Date();
+  maintenant.setHours(0,0,0,0);
+  let nbRetards = 0;
+
+  DEMANDES.forEach(d => {
+    const dc = getDomainColor(d.domaine);
+
+    // Calculer si en retard
+    let enRetard = false;
+    let joursRetard = 0;
+    if (d.retour) {
+      const dateRetour = new Date(d.retour);
+      dateRetour.setHours(0,0,0,0);
+      joursRetard = Math.floor((maintenant - dateRetour) / (1000 * 60 * 60 * 24));
+      enRetard = joursRetard > 0;
+    }
+    if (enRetard) nbRetards++;
+
+    const div = document.createElement("div");
+    div.className = "req-item"
+      + (selectedReq && selectedReq.id === d.id ? " selected" : "")
+      + (enRetard ? " en-retard" : "");
+    div.style.flexShrink = "0";
+    div.style.minWidth   = "160px";
+    div.innerHTML = `
+      <div class="ri-title">
+        <span class="dot dot-${dc}" style="display:inline-block;vertical-align:middle;margin-right:4px"></span>
+        ${d.utilisateur}
+      </div>
+      <div class="ri-sub">${d.projet} · ${fmtDate(d.dateDemande)}</div>
+      ${enRetard ? `<div class="retard-chip">⏱ ${joursRetard} jour(s) de retard</div>` : ""}
+    `;
+    div.onclick = () => selectReq(d, div);
+    list.appendChild(div);
+  });
+
+  updateBadgeRetard(nbRetards);
+}
+
+// Met à jour le badge et le bouton alerte
+function updateBadgeRetard(nb) {
+  const badge = document.getElementById("badge-retard");
+  const btn   = document.getElementById("btn-alerte-retard");
+  if (!badge || !btn) return;
+  if (nb > 0) {
+    badge.textContent = nb;
+    badge.style.display = "inline-block";
+    btn.style.opacity = "1";
+  } else {
+    badge.style.display = "none";
+    btn.style.opacity = ".5";
+  }
+}
+
+function selectReq(d, el) {
+  selectedReq = d;
+  document.querySelectorAll(".req-item").forEach(x => x.classList.remove("selected"));
+  el.classList.add("selected");
+
+  document.getElementById("a-user").textContent = d.utilisateur;
+  document.getElementById("a-projet").textContent = d.projet;
+  document.getElementById("a-domaine").innerHTML = `<span class="badge-domain badge-${getDomainColor(d.domaine)}">${d.domaine}</span>`;
+  document.getElementById("a-date-demande").textContent = fmtDate(d.dateDemande);
+  document.getElementById("a-date-sortie").textContent = fmtDate(d.sortie);
+  document.getElementById("a-date-retour").textContent = fmtDate(d.retour);
+
+  const refList = document.getElementById("admin-refs-list");
+  refList.innerHTML = "";
+  (d.lignes || []).forEach(l => {
+    const div = document.createElement("div");
+    div.style.cssText = "display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--surface2)";
+    div.innerHTML = `<span><strong>${l.ref}</strong> — ${l.desc ? l.desc.substring(0,35)+"..." : ""}</span>
+                     <span style="color:var(--accent);font-weight:700">×${l.qteDemandee}</span>`;
+    refList.appendChild(div);
+  });
+
+  // Activer le bouton Check-list Retour
+  const btn = document.getElementById("btn-checklist");
+  if (btn) {
+    btn.disabled = false;
+    btn.textContent = "📦 CHECK-LIST RETOUR — " + d.utilisateur;
+  }
+}
+
+// ─── CHECK-LIST RETOUR ───
+function openChecklist() {
+  if (!currentAdmin) { showToast("⚠ Connectez-vous d'abord"); openLogin(); return; }
+  if (!selectedReq)  { showToast("⚠ Sélectionnez une demande"); return; }
+
+  const d = selectedReq;
+
+  // En-tête du modal
+  document.getElementById("checklist-header").innerHTML =
+    `<strong>${d.utilisateur}</strong> · ${d.projet}<br>
+     Sortie : <strong>${fmtDate(d.sortie)}</strong> &nbsp;→&nbsp; Retour prévu : <strong>${fmtDate(d.retour)}</strong>`;
+
+  // Générer la liste des références à cocher
+  const container = document.getElementById("checklist-items");
+  container.innerHTML = "";
+  (d.lignes || []).forEach((l, i) => {
+    const item = document.createElement("div");
+    item.className = "checklist-item";
+    item.id = "cli-" + i;
+    item.innerHTML = `
+      <input type="checkbox" id="chk-${i}" onchange="onChecklistChange(${i}, ${d.lignes.length})">
+      <div class="ci-body">
+        <div class="ci-ref">${l.ref}</div>
+        <div class="ci-desc">${l.desc ? l.desc.substring(0, 50) + "…" : ""}</div>
+      </div>
+      <div style="text-align:right">
+        <div class="ci-qte">×${l.qteDemandee}</div>
+        <div class="ci-status" id="ci-status-${i}">En attente</div>
+      </div>`;
+    // Clic sur toute la ligne = coche la case
+    item.addEventListener("click", function(e) {
+      if (e.target.type !== "checkbox") {
+        const cb = document.getElementById("chk-" + i);
+        cb.checked = !cb.checked;
+        onChecklistChange(i, d.lignes.length);
+      }
+    });
+    container.appendChild(item);
+  });
+
+  // Réinitialiser la barre de progression
+  updateChecklistProgress(0, d.lignes.length);
+  document.getElementById("checklist-note").value = "";
+  document.getElementById("modal-checklist").classList.remove("hidden");
+}
+
+function onChecklistChange(idx, total) {
+  const cb   = document.getElementById("chk-" + idx);
+  const item = document.getElementById("cli-" + idx);
+  const status = document.getElementById("ci-status-" + idx);
+
+  if (cb.checked) {
+    item.classList.add("checked");
+    status.textContent  = "✅ Retourné";
+    status.className    = "ci-status ci-ok";
+  } else {
+    item.classList.remove("checked");
+    status.textContent  = "En attente";
+    status.className    = "ci-status";
+  }
+
+  // Compter les cases cochées
+  let coches = 0;
+  for (let i = 0; i < total; i++) {
+    const c = document.getElementById("chk-" + i);
+    if (c && c.checked) coches++;
+  }
+  updateChecklistProgress(coches, total);
+}
+
+function updateChecklistProgress(coches, total) {
+  const pct = total > 0 ? Math.round((coches / total) * 100) : 0;
+  document.getElementById("checklist-progress-bar").style.width = pct + "%";
+  document.getElementById("checklist-progress-txt").textContent = coches + " / " + total;
+}
+
+function closeChecklist() {
+  document.getElementById("modal-checklist").classList.add("hidden");
+}
+
+async function validerRetour() {
+  if (!selectedReq) return;
+  const d     = selectedReq;
+  const note  = document.getElementById("checklist-note").value.trim();
+  const lignes = d.lignes || [];
+  const total  = lignes.length;
+
+  // Identifier ce qui est retourné et ce qui manque
+  const retournes = [];
+  const manquants = [];
+  lignes.forEach((l, i) => {
+    const cb = document.getElementById("chk-" + i);
+    if (cb && cb.checked) retournes.push(l);
+    else                   manquants.push(l);
+  });
+
+  if (retournes.length === 0) {
+    showToast("⚠ Cochez au moins une référence retournée"); return;
+  }
+
+  // Confirmation si des articles manquent
+  if (manquants.length > 0) {
+    const liste = manquants.map(l => l.ref).join(", ");
+    if (!confirm(`⚠ ${manquants.length} référence(s) non cochée(s) :\n${liste}\n\nConfirmer quand même le retour partiel ?`)) return;
+  }
+
+  // ── Réapprovisionner le stock local ──
+  const key = getDomainKey(d.domaine);
+  retournes.forEach(l => {
+    const item = STOCK[key]?.find(i => i.ref === l.ref);
+    if (item) {
+      item.qteDispo = Math.min(item.qte, item.qteDispo + l.qteDemandee);
+    }
+  });
+
+  // ── Marquer la demande comme retournée ──
+  d.retourValide   = true;
+  d.dateRetourReel = today();
+  d.noteRetour     = note;
+  d.manquantsRetour = manquants.map(l => l.ref);
+
+  // ── Envoyer la mise à jour vers Google Sheets ──
+  const payload = retournes.map(l => ({
+    action:        "retour",
+    reference:     l.ref,
+    quantite:      l.qteDemandee,
+    utilisateur:   d.utilisateur,
+    projet:        d.projet,
+    domaine:       d.domaine,
+    dateRetourReel: today(),
+    note
+  }));
+  const res = await sendToSheet("validerRetour", payload);
+  if (res && res.ok) {
+    showToast("✅ Retour validé — stock réapprovisionné");
+  journaliser("RETOUR VALIDÉ", "Retour de " + d.utilisateur + " — " + d.projet);
+  } else {
+    showToast("✅ Retour validé localement (hors ligne)");
+  journaliser("RETOUR VALIDÉ", "Retour de " + d.utilisateur + " — " + d.projet + " (hors ligne)");
+  }
+
+  // ── Déplacer la demande de DEMANDES vers DEMANDES_RETOURNEES ──
+  d.retourValide    = true;
+  d.dateRetourReel  = today();
+  d.noteRetour      = note;
+  d.manquantsRetour = manquants.map(l => l.ref);
+  d.adminRetour     = currentAdmin ? currentAdmin.nom : "–";
+  DEMANDES          = DEMANDES.filter(x => x.id !== d.id);
+  DEMANDES_RETOURNEES.push(d);
+  selectedReq = null;
+
+  // ── Rafraîchir l'interface ──
+  closeChecklist();
+  refreshStockList();
+  refreshAdminView();
+  refreshHistorique();
+
+  // ── Remettre le bouton checklist à son état initial (désactivé, sans demande) ──
+  const btn = document.getElementById("btn-checklist");
+  if (btn) {
+    btn.disabled    = true;
+    btn.textContent = "📦 CHECK-LIST RETOUR";
+  }
+
+  // ── Imprimer le récapitulatif de retour ──
+  const html = buildRetourHTML({ d, retournes, manquants, note });
+  printInNewWindow(html);
+
+  // ── Archiver le bon de retour en PDF dans Google Drive ──
+  archiverBonDrive({
+    type:        "RETOUR",
+    utilisateur: d.utilisateur,
+    projet:      d.projet,
+    domaine:     d.domaine,
+    date:        today(),
+    htmlContent: html
+  });
+}
+
+// ─── HISTORIQUE ───
+function updateHistoDate() {
+  const el = document.getElementById("histo-date");
+  if (el) el.textContent = new Date().toLocaleDateString("fr-FR", { weekday:"long", day:"numeric", month:"long", year:"numeric" });
+}
+
+function refreshHistorique() {
+  updateHistoDate();
+  const filterDomaine = document.getElementById("histo-filter-domaine")?.value || "";
+  const filterUser    = (document.getElementById("histo-filter-user")?.value || "").toLowerCase();
+
+  // Toutes les demandes : en cours + retournées
+  const toutesLesDemandes = [...DEMANDES, ...DEMANDES_RETOURNEES];
+
+  const filtered = toutesLesDemandes.filter(d => {
+    if (filterDomaine && d.domaine !== filterDomaine) return false;
+    if (filterUser    && !d.utilisateur.toLowerCase().includes(filterUser)) return false;
+    return true;
+  });
+
+  // Table
+  const tbody = document.getElementById("histo-body");
+  tbody.innerHTML = "";
+  filtered.forEach(d => {
+    const estRetourne = d.retourValide === true;
+    (d.lignes || []).forEach(l => {
+      const key       = getDomainKey(d.domaine);
+      const stockItem = STOCK[key]?.find(i => i.ref === l.ref);
+      const manquant  = stockItem ? l.qteDemandee > stockItem.qteDispo + l.qteDemandee : false;
+      const note      = d.noteRetour || "";
+      const tr        = document.createElement("tr");
+
+      // Ligne verte en fond si retournée
+      if (estRetourne) tr.style.background = "#F0FBF5";
+
+      // Colonne statut : "Retourné" ou "En cours" ou "Manquant"
+      let statutCell;
+      if (estRetourne) {
+        statutCell = `<span class="chip chip-ok">✅ Retourné</span>`;
+      } else if (manquant) {
+        statutCell = `<span class="chip chip-danger">⚠ Manquant</span>`;
+      } else {
+        statutCell = `<span class="chip">En cours</span>`;
+      }
+
+      tr.innerHTML = `
+        <td>${fmtDate(d.dateDemande)}</td>
+        <td>${d.utilisateur}</td>
+        <td>${d.projet}</td>
+        <td><span class="badge-domain badge-${getDomainColor(d.domaine)}">${d.domaine}</span></td>
+        <td><strong>${l.ref}</strong></td>
+        <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis">${l.desc || "–"}</td>
+        <td style="text-align:center;font-weight:700">${l.qteDemandee}</td>
+        <td>${fmtDate(d.sortie)}</td>
+        <td>${estRetourne && d.dateRetourReel ? fmtDate(d.dateRetourReel) : fmtDate(d.retour)}</td>
+        <td>${statutCell}</td>
+        <td style="max-width:160px;font-size:11px;color:${note ? 'var(--accent-lum)' : 'var(--text3)'}">
+          ${note
+            ? `<span title="${note}">📝 ${note.length > 40 ? note.substring(0,40)+'…' : note}</span>`
+            : '–'}
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  });
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;color:var(--text3);padding:16px">Aucune demande enregistrée</td></tr>`;
+  }
+
+  // Synthèse manquants
+  const manquantsEl = document.getElementById("histo-manquants");
+  const allMissing = [];
+  Object.entries(STOCK).forEach(([key, items]) => {
+    items.forEach(item => {
+      if (item.qteDispo < item.qte) {
+        // Trouver dernier utilisateur
+        let dernierUser = "–", dernierProjet = "–", dernierSortie = "–";
+        DEMANDES.slice().reverse().forEach(d => {
+          const l = (d.lignes||[]).find(l => l.ref === item.ref);
+          if (l && l.qteDemandee > 0) {
+            if (dernierUser === "–") { dernierUser = d.utilisateur; dernierProjet = d.projet; dernierSortie = fmtDate(d.sortie); }
+          }
+        });
+        allMissing.push({ ref: item.ref, manque: item.qte - item.qteDispo, total: item.qte, dispo: item.qteDispo, user: dernierUser, projet: dernierProjet, sortie: dernierSortie });
+      }
+    });
+  });
+  if (allMissing.length === 0) {
+    manquantsEl.innerHTML = `<span class="chip chip-ok">✅ Aucun article manquant</span>`;
+  } else {
+    manquantsEl.innerHTML = allMissing.map(m =>
+      `<div style="display:flex;gap:8px;align-items:center;margin-bottom:4px;flex-wrap:wrap">
+        <strong style="font-size:12px">${m.ref}</strong>
+        <span class="chip chip-danger">−${m.manque}</span>
+        <span style="font-size:11px;color:var(--text3)">${m.dispo}/${m.total} · ${m.user} · ${m.projet} · sortie ${m.sortie}</span>
+      </div>`
+    ).join("");
+  }
+}
+
+// ─── EXPORT CSV ───
+// ─── EXPORT EXCEL XLSX ───
+async function exportXLSX() {
+  if (!currentAdmin) { showToast("⚠ Connectez-vous d'abord"); openLogin(); return; }
+
+  showToast("⏳ Génération du fichier Excel…", 3000);
+
+  // Charger SheetJS si pas encore chargé
+  await loadSheetJS();
+
+  const XLSX   = window.XLSX;
+  const wb     = XLSX.utils.book_new();
+  const toutes = [...DEMANDES, ...DEMANDES_RETOURNEES];
+
+  // ── Styles de base ──
+  // (SheetJS community ne supporte pas le styling natif — on utilise des valeurs
+  //  et on applique la mise en forme via les options de write)
+
+  // Colonnes communes pour les onglets demandes
+  const COLS_DEMANDES = [
+    "DATE DEMANDE","UTILISATEUR","PROJET","DOMAINE",
+    "RÉFÉRENCE","DESCRIPTIF","QUANTITÉ",
+    "DATE SORTIE","DATE RETOUR","STATUT","NOTE RETOUR"
+  ];
+
+  // ── Construire les lignes pour un domaine donné ──
+  function buildRows(demandes, domaine) {
+    const filtered = domaine
+      ? demandes.filter(d => d.domaine === domaine || getDomainKey(d.domaine) === domaine)
+      : demandes;
+
+    const rows = [];
+    const maintenant = new Date(); maintenant.setHours(0,0,0,0);
+
+    filtered.forEach(d => {
+      (d.lignes||[]).forEach(l => {
+        let statut = "En cours";
+        if (d.retourValide) {
+          statut = "Retourné";
+        } else if (d.retour) {
+          const dr = new Date(d.retour); dr.setHours(0,0,0,0);
+          const jours = Math.floor((maintenant - dr) / 86400000);
+          if (jours > 0) statut = "En retard (" + jours + "j)";
+        }
+        rows.push([
+          d.dateDemande   || "",
+          d.utilisateur   || "",
+          d.projet        || "",
+          d.domaine       || "",
+          l.ref           || "",
+          l.desc          || "",
+          l.qteDemandee   || 0,
+          d.sortie        || "",
+          d.retour        || "",
+          statut,
+          d.noteRetour    || ""
+        ]);
+      });
+    });
+    return rows;
+  }
+
+  // ── Ajouter un onglet demandes avec mise en forme ──
+  function addSheetDemandes(wb, nom, demandes, domaine) {
+    const rows  = buildRows(demandes, domaine);
+    const data  = [COLS_DEMANDES, ...rows];
+
+    // Ligne de synthèse en bas
+    const nbRetournes  = rows.filter(r => r[9] === "Retourné").length;
+    const nbEnCours    = rows.filter(r => r[9] === "En cours").length;
+    const nbRetards    = rows.filter(r => String(r[9]).startsWith("En retard")).length;
+    const totalQte     = rows.reduce((acc, r) => acc + (parseInt(r[6]) || 0), 0);
+    data.push([]); // ligne vide
+    data.push([
+      "SYNTHÈSE →",
+      rows.length + " ligne(s)",
+      "Retournés : " + nbRetournes,
+      "En cours : " + nbEnCours,
+      "En retard : " + nbRetards,
+      "",
+      "Total qté : " + totalQte,
+      "","","",""
+    ]);
+
+    const ws = XLSX.utils.aoa_to_sheet(data);
+
+    // Largeurs de colonnes (en caractères)
+    ws["!cols"] = [
+      { wch: 14 }, // DATE DEMANDE
+      { wch: 20 }, // UTILISATEUR
+      { wch: 22 }, // PROJET
+      { wch: 10 }, // DOMAINE
+      { wch: 10 }, // RÉFÉRENCE
+      { wch: 38 }, // DESCRIPTIF
+      { wch: 9  }, // QUANTITÉ
+      { wch: 12 }, // DATE SORTIE
+      { wch: 12 }, // DATE RETOUR
+      { wch: 18 }, // STATUT
+      { wch: 30 }, // NOTE RETOUR
+    ];
+
+    // Figer la première ligne
+    ws["!freeze"] = { xSplit: 0, ySplit: 1 };
+
+    XLSX.utils.book_append_sheet(wb, ws, nom);
+  }
+
+  // ── Onglet 1 : Toutes les demandes ──
+  addSheetDemandes(wb, "📋 Toutes", toutes, null);
+
+  // ── Onglets 2-4 : Par domaine ──
+  addSheetDemandes(wb, "🔊 Son",     toutes, "Son");
+  addSheetDemandes(wb, "💡 Lumière", toutes, "Lumière");
+  addSheetDemandes(wb, "🎬 Vidéo",   toutes, "Vidéo");
+
+  // ── Onglet 5 : État du stock ──
+  function addSheetStock(wb) {
+    const COLS_STOCK = [
+      "RÉFÉRENCE","DOMAINE","DESCRIPTIF",
+      "QTÉ TOTALE","QTÉ DISPONIBLE","QTÉ SORTIE","% UTILISATION"
+    ];
+    const rows = [];
+    ["SON","LUMIERE","VIDEO"].forEach(key => {
+      const domLabel = key === "SON" ? "Son" : key === "LUMIERE" ? "Lumière" : "Vidéo";
+      (STOCK[key] || []).forEach(item => {
+        const sortie = item.qte - item.qteDispo;
+        const pct    = item.qte > 0 ? Math.round((sortie / item.qte) * 100) + "%" : "0%";
+        rows.push([
+          item.ref, domLabel, item.desc,
+          item.qte, item.qteDispo, sortie, pct
+        ]);
+      });
+    });
+
+    // Synthèse stock
+    const totalRefs   = rows.length;
+    const totalDispo  = rows.reduce((a, r) => a + (parseInt(r[4]) || 0), 0);
+    const totalSortie = rows.reduce((a, r) => a + (parseInt(r[5]) || 0), 0);
+
+    const data = [COLS_STOCK, ...rows, [],
+      ["SYNTHÈSE →", totalRefs + " réf.", "",
+       "", "Dispo : " + totalDispo, "Sorti : " + totalSortie, ""]
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    ws["!cols"] = [
+      { wch: 10 }, // RÉFÉRENCE
+      { wch: 10 }, // DOMAINE
+      { wch: 40 }, // DESCRIPTIF
+      { wch: 12 }, // QTÉ TOTALE
+      { wch: 15 }, // QTÉ DISPONIBLE
+      { wch: 11 }, // QTÉ SORTIE
+      { wch: 14 }, // % UTILISATION
+    ];
+    ws["!freeze"] = { xSplit: 0, ySplit: 1 };
+    XLSX.utils.book_append_sheet(wb, ws, "📦 Stock");
+  }
+  addSheetStock(wb);
+
+  // ── Onglet 6 : Alertes retard ──
+  function addSheetRetards(wb) {
+    const maintenant = new Date(); maintenant.setHours(0,0,0,0);
+    const retards = toutes.filter(d => {
+      if (d.retourValide) return false;
+      if (!d.retour) return false;
+      const dr = new Date(d.retour); dr.setHours(0,0,0,0);
+      return dr < maintenant;
+    });
+
+    const COLS_RETARDS = [
+      "UTILISATEUR","PROJET","DOMAINE",
+      "DATE SORTIE","DATE RETOUR PRÉVUE","JOURS DE RETARD","RÉFÉRENCES"
+    ];
+
+    const rows = retards.map(d => {
+      const dr    = new Date(d.retour); dr.setHours(0,0,0,0);
+      const jours = Math.floor((maintenant - dr) / 86400000);
+      const refs  = (d.lignes||[]).map(l => l.ref + " ×" + l.qteDemandee).join(", ");
+      return [d.utilisateur, d.projet, d.domaine, d.sortie, d.retour, jours, refs];
+    });
+
+    const data = [COLS_RETARDS, ...rows];
+    if (rows.length === 0) data.push(["Aucun retard constaté","","","","","",""]);
+
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    ws["!cols"] = [
+      { wch: 20 },{ wch: 22 },{ wch: 10 },
+      { wch: 12 },{ wch: 18 },{ wch: 16 },{ wch: 40 }
+    ];
+    ws["!freeze"] = { xSplit: 0, ySplit: 1 };
+    XLSX.utils.book_append_sheet(wb, ws, "⏱ Retards");
+  }
+  addSheetRetards(wb);
+
+  // ── Générer et télécharger le fichier ──
+  const nomFichier = "Stock-DNMADE-Daunot-" + today() + ".xlsx";
+  XLSX.writeFile(wb, nomFichier);
+  showToast("✅ Fichier Excel généré : " + nomFichier);
+  journaliser("EXPORT XLSX", "Export généré : " + nomFichier);
+}
+
+// Charge SheetJS depuis CDN si pas encore disponible
+function loadSheetJS() {
+  return new Promise((resolve, reject) => {
+    if (window.XLSX) { resolve(); return; }
+    const script   = document.createElement("script");
+    script.src     = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+    script.onload  = resolve;
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+}
+
+// ─── IMPRESSION HISTORIQUE ───
+function histoImprimer() {
+  if (!currentAdmin) { showToast("⚠ Connectez-vous d'abord"); openLogin(); return; }
+  const rows = [];
+  DEMANDES.forEach(d => {
+    (d.lignes||[]).forEach(l => {
+      const key = getDomainKey(d.domaine);
+      const si = STOCK[key]?.find(i=>i.ref===l.ref);
+      const manquant = si ? (l.qteDemandee > si.qteDispo + l.qteDemandee ? "OUI" : "NON") : "?";
+      rows.push({ date: d.dateDemande, user: d.utilisateur, projet: d.projet, domaine: d.domaine, ref: l.ref, desc: l.desc, qte: l.qteDemandee, sortie: d.sortie, retour: d.retour, manquant, note: d.noteRetour || "" });
+    });
+  });
+
+  const html = `<html><head><meta charset="UTF-8"><title>État du stock DNMADE</title>
+  <style>
+    body{font-family:sans-serif;font-size:12px;padding:20px;color:#1A1D23}
+    h2{color:#3B6FCA;border-bottom:2px solid #3B6FCA;padding-bottom:8px;margin-bottom:12px}
+    table{width:100%;border-collapse:collapse;margin-top:8px}
+    th{background:#3B6FCA;color:#fff;padding:6px 8px;text-align:left;font-size:11px}
+    td{padding:5px 8px;border-bottom:1px solid #eee;font-size:11px}
+    tr:nth-child(even) td{background:#f5f7fc}
+    .manq{color:#D94040;font-weight:700}
+    .note-cell{color:#E8A020;font-style:italic}
+  </style></head><body>
+  <h2>📦 État du Stock — DNMADE Daunot</h2>
+  <p>Administrateur : ${currentAdmin ? currentAdmin.nom : "–"} · Imprimé le ${fmtNow()}</p>
+  <table>
+    <thead><tr><th>Date</th><th>Utilisateur</th><th>Projet</th><th>Domaine</th><th>Référence</th><th>Descriptif</th><th>Qté</th><th>Sortie</th><th>Retour</th><th>Manquant</th><th>Note retour</th></tr></thead>
+    <tbody>${rows.map(r=>`<tr>
+      <td>${fmtDate(r.date)}</td><td>${r.user}</td><td>${r.projet}</td><td>${r.domaine}</td>
+      <td><strong>${r.ref}</strong></td><td>${r.desc||""}</td><td>${r.qte}</td>
+      <td>${fmtDate(r.sortie)}</td><td>${fmtDate(r.retour)}</td>
+      <td class="${r.manquant==="OUI"?"manq":""}">${r.manquant}</td>
+      <td class="${r.note?"note-cell":""}">${r.note||"–"}</td>
+    </tr>`).join("")}</tbody>
+  </table>
+  <p style="margin-top:16px;color:#999;font-size:10px">Gestionnaire des stocks DNMADE Daunot · ${fmtNow()}</p>
+  <script>window.onload=()=>{window.print();}<\/script></body></html>`;
+  printInNewWindow(html);
+}
+
+// ─── ARCHIVAGE PDF DANS GOOGLE DRIVE ───
+
+async function archiverBonDrive({ type, utilisateur, projet, domaine, date, htmlContent }) {
+  try {
+    const res = await sendToSheet("archiverPDF", {
+      type,
+      utilisateur,
+      projet,
+      domaine,
+      date,
+      htmlContent,
+      adminNom: currentAdmin ? currentAdmin.nom : "Utilisateur"
+    });
+
+    if (res?.ok) {
+      showToast("📁 Archivé dans Drive : " + res.dossier, 3000);
+    } else {
+      // Archivage échoué silencieusement — ne pas bloquer l'utilisateur
+      console.warn("Archivage Drive échoué :", res?.err || "erreur inconnue");
+    }
+  } catch(e) {
+    console.warn("Archivage Drive non disponible :", e.message);
+  }
+}
+
+// ─── CONSTRUCTION DU BON D'IMPRESSION ───
+function buildPrintHTML({ dateDemande, user, projet, domaine, sortie, retour, lignes }) {
+  return `<html><head><meta charset="UTF-8"><title>Bon de demande DNMADE</title>
+  <style>
+    body{font-family:'Segoe UI',sans-serif;font-size:13px;padding:24px;max-width:700px;margin:0 auto;color:#1A1D23}
+    .header{text-align:center;border-bottom:3px solid #3B6FCA;padding-bottom:16px;margin-bottom:20px}
+    .header h2{font-size:20px;font-weight:800;color:#3B6FCA;letter-spacing:.5px}
+    .header p{font-size:11px;color:#666;margin-top:4px}
+    .logo{font-size:28px;margin-bottom:6px}
+    .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;background:#F7F8FA;padding:14px;border-radius:8px}
+    .info-grid dt{font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}
+    .info-grid dd{font-size:13px;font-weight:600;color:#1A1D23}
+    table{width:100%;border-collapse:collapse}
+    th{background:#3B6FCA;color:#fff;padding:8px 10px;text-align:left;font-size:12px}
+    td{padding:7px 10px;border-bottom:1px solid #EEF1F7;font-size:12px}
+    tr:nth-child(even) td{background:#F7F8FA}
+    .footer{margin-top:24px;font-size:10px;color:#999;text-align:center;border-top:1px solid #eee;padding-top:12px}
+    .sig{margin-top:30px;display:grid;grid-template-columns:1fr 1fr;gap:20px}
+    .sig-box{border-top:1px solid #ccc;padding-top:8px;font-size:11px;color:#666}
+    @media print{body{padding:0} .no-print{display:none}}
+  </style></head><body>
+  <div class="header"><div class="logo">📦</div><h2>BON DE DEMANDE DE MATÉRIEL</h2><p>DNMADE Daunot · Gestionnaire des stocks</p></div>
+  <dl class="info-grid">
+    <div><dt>Date de demande</dt><dd>${fmtDate(dateDemande)}</dd></div>
+    <div><dt>Utilisateur</dt><dd>${user}</dd></div>
+    <div><dt>Projet</dt><dd>${projet}</dd></div>
+    <div><dt>Domaine</dt><dd>${domaine}</dd></div>
+    <div><dt>Date de sortie</dt><dd>${fmtDate(sortie)}</dd></div>
+    <div><dt>Date de retour</dt><dd>${fmtDate(retour)}</dd></div>
+  </dl>
+  <table>
+    <thead><tr><th>Référence</th><th>Descriptif</th><th>Quantité demandée</th></tr></thead>
+    <tbody>${lignes.map(l=>`<tr><td><strong>${l.ref}</strong></td><td>${l.desc||""}</td><td style="text-align:center;font-weight:700;color:#3B6FCA">${l.qteDemandee}</td></tr>`).join("")}</tbody>
+  </table>
+  <div class="sig">
+    <div class="sig-box">Signature de l'utilisateur<br><br><br></div>
+    <div class="sig-box">Visa du responsable<br><br><br></div>
+  </div>
+  <div class="footer">Gestionnaire des stocks DNMADE Daunot · Imprimé le ${fmtNow()}</div>
+  <script>window.onload=()=>{window.print();}<\/script></body></html>`;
+}
+
+// ─── MOTS DE PASSE ───
+
+// Stocker les MDP en mémoire (chargés depuis Sheets au login)
+let PASSWORDS = {
+  "SON":    "admin SON",
+  "LUMIERE":"admin LUM",
+  "VIDEO":  "admin VIDEO"
+};
+
+// Charger les MDP depuis Google Sheets au démarrage
+async function loadPasswordsFromSheet() {
+  const res = await sendToSheet("getPasswords", {});
+  if (res?.ok && res.data) {
+    Object.assign(PASSWORDS, res.data);
+  }
+}
+
+// Modifier doLogin pour utiliser PASSWORDS au lieu des constantes
+// (appelée automatiquement — remplace la vérification dans doLogin)
+function getPasswordForAdmin(adminIdx) {
+  const admin = ADMINS[adminIdx];
+  if (!admin) return null;
+  return PASSWORDS[admin.domaine] || admin.password;
+}
+
+function openChangerMdp() {
+  if (!currentAdmin) { showToast("⚠ Connectez-vous d'abord"); return; }
+  document.getElementById("pwd-admin-info").innerHTML =
+    `Administrateur : <strong>${currentAdmin.nom}</strong> · Domaine : <strong>${currentAdmin.domaine}</strong>`;
+  document.getElementById("pwd-actuel").value    = "";
+  document.getElementById("pwd-nouveau").value   = "";
+  document.getElementById("pwd-confirmer").value = "";
+  document.getElementById("pwd-strength-bar").className = "pwd-strength";
+  document.getElementById("pwd-hint").textContent = "";
+  document.getElementById("modal-chg-pwd").classList.remove("hidden");
+}
+
+function closeChangerMdp() {
+  document.getElementById("modal-chg-pwd").classList.add("hidden");
+}
+
+function evaluerMdp() {
+  const pwd = document.getElementById("pwd-nouveau").value;
+  const bar = document.getElementById("pwd-strength-bar");
+  const hint= document.getElementById("pwd-hint");
+
+  if (pwd.length === 0) {
+    bar.className = "pwd-strength"; hint.textContent = ""; return;
+  }
+  const score =
+    (pwd.length >= 6  ? 1 : 0) +
+    (pwd.length >= 10 ? 1 : 0) +
+    (/[0-9]/.test(pwd) ? 1 : 0) +
+    (/[^a-zA-Z0-9]/.test(pwd) ? 1 : 0);
+
+  if (score <= 1) {
+    bar.className = "pwd-strength faible";
+    hint.textContent = "Faible — ajoutez des chiffres ou caractères spéciaux";
+    hint.style.color = "var(--danger)";
+  } else if (score <= 3) {
+    bar.className = "pwd-strength moyen";
+    hint.textContent = "Moyen";
+    hint.style.color = "var(--accent-lum)";
+  } else {
+    bar.className = "pwd-strength fort";
+    hint.textContent = "Fort ✅";
+    hint.style.color = "var(--success)";
+  }
+}
+
+async function changerMotDePasse() {
+  const actuel    = document.getElementById("pwd-actuel").value;
+  const nouveau   = document.getElementById("pwd-nouveau").value;
+  const confirmer = document.getElementById("pwd-confirmer").value;
+
+  // Vérifications
+  const mdpActuel = PASSWORDS[currentAdmin.domaine] || currentAdmin.password;
+  if (actuel !== mdpActuel)    { showToast("❌ Mot de passe actuel incorrect"); return; }
+  if (nouveau.length < 6)      { showToast("⚠ Minimum 6 caractères"); return; }
+  if (nouveau === actuel)      { showToast("⚠ Le nouveau MDP doit être différent"); return; }
+  if (nouveau !== confirmer)   { showToast("❌ Les deux mots de passe ne correspondent pas"); return; }
+
+  // Mettre à jour en mémoire
+  PASSWORDS[currentAdmin.domaine] = nouveau;
+  currentAdmin.password = nouveau;
+
+  // Envoyer vers Google Sheets
+  const navigateur = navigator.userAgent.substring(0, 80);
+  const res = await sendToSheet("changePassword", {
+    domaine:    currentAdmin.domaine,
+    nouveauMdp: nouveau,
+    adminNom:   currentAdmin.nom,
+    navigateur
+  });
+
+  if (res?.ok) {
+    showToast("✅ Mot de passe modifié avec succès");
+  } else {
+    showToast("✅ Modifié localement (hors ligne)");
+  }
+
+  // Journaliser
+  journaliser("CHANGEMENT MDP", "Mot de passe modifié pour le domaine " + currentAdmin.domaine);
+  closeChangerMdp();
+}
+
+// ─── JOURNAL DE CONNEXION ───
+
+let journalCache = []; // cache local des entrées du journal
+
+// Enregistrer une action dans le journal (local + Google Sheets)
+async function journaliser(action, detail) {
+  if (!currentAdmin) return;
+  const navigateur = navigator.userAgent.substring(0, 80);
+  const entry = {
+    date:       new Date().toLocaleDateString("fr-FR"),
+    heure:      new Date().toLocaleTimeString("fr-FR", { hour:"2-digit", minute:"2-digit", second:"2-digit" }),
+    adminNom:   currentAdmin.nom,
+    domaine:    currentAdmin.domaine,
+    action,
+    detail:     detail || "",
+    navigateur
+  };
+
+  // Ajouter en tête du cache local
+  journalCache.unshift(entry);
+  if (journalCache.length > 50) journalCache.pop();
+
+  // Envoyer vers Google Sheets (silencieux — pas de toast)
+  await sendToSheet("logAction", {
+    adminNom:   currentAdmin.nom,
+    domaine:    currentAdmin.domaine,
+    action,
+    detail:     detail || "",
+    navigateur
+  });
+}
+
+function openJournal() {
+  if (!currentAdmin) { showToast("⚠ Connectez-vous d'abord"); return; }
+  document.getElementById("modal-journal").classList.remove("hidden");
+  chargerJournal();
+}
+
+function closeJournal() {
+  document.getElementById("modal-journal").classList.add("hidden");
+}
+
+async function chargerJournal() {
+  const listEl = document.getElementById("journal-list");
+  listEl.innerHTML = `<div style="text-align:center;padding:20px;color:var(--text3);font-size:12px">⏳ Chargement…</div>`;
+
+  // Essayer depuis Google Sheets
+  const res = await sendToSheet("getJournal", { limite: 50 });
+  if (res?.ok && res.data && res.data.length > 0) {
+    journalCache = res.data;
+  }
+
+  renderJournal(journalCache);
+}
+
+function filtrerJournal() {
+  const filtreAction = document.getElementById("journal-filter-action").value.toLowerCase();
+  const filtreAdmin  = document.getElementById("journal-filter-admin").value.toLowerCase();
+
+  const filtre = journalCache.filter(e => {
+    const matchAction = !filtreAction || e.action.toLowerCase().includes(filtreAction);
+    const matchAdmin  = !filtreAdmin  || e.adminNom.toLowerCase().includes(filtreAdmin);
+    return matchAction && matchAdmin;
+  });
+  renderJournal(filtre);
+}
+
+function renderJournal(entries) {
+  const listEl = document.getElementById("journal-list");
+  listEl.innerHTML = "";
+
+  if (!entries || entries.length === 0) {
+    listEl.innerHTML = `<div style="text-align:center;padding:20px;color:var(--text3);font-size:12px">Aucune entrée dans le journal</div>`;
+    return;
+  }
+
+  entries.forEach(e => {
+    const action = (e.action || "").toUpperCase();
+    let cls = "action";
+    if (action.includes("CONNEXION") && !action.includes("DÉCONNEXION")) cls = "connexion";
+    else if (action.includes("DÉCONNEXION")) cls = "deconnexion";
+    else if (action.includes("MDP"))         cls = "mdp";
+
+    // Icône selon l'action
+    const icone =
+      action.includes("CONNEXION") && !action.includes("DÉCO") ? "🔓" :
+      action.includes("DÉCO")      ? "🔒" :
+      action.includes("MDP")       ? "🔑" :
+      action.includes("RETOUR")    ? "📦" :
+      action.includes("STOCK")     ? "⚙️" :
+      action.includes("EXPORT")    ? "📊" :
+      action.includes("ALERTE")    ? "📧" :
+      action.includes("UTILISATEUR")? "👤" : "📋";
+
+    const colorDomaine =
+      e.domaine === "SON"     ? "var(--accent-son)" :
+      e.domaine === "LUMIERE" ? "var(--accent-lum)" :
+      e.domaine === "VIDEO"   ? "var(--accent-vid)" : "var(--text3)";
+
+    const div = document.createElement("div");
+    div.className = `journal-item ${cls}`;
+    div.innerHTML = `
+      <div class="ji-header">
+        <div class="ji-action">${icone} ${e.action || "–"}</div>
+        <div class="ji-time">${e.date || ""} ${e.heure || ""}</div>
+      </div>
+      <div class="ji-detail">${e.detail || "–"}</div>
+      <div class="ji-admin">
+        <strong style="color:${colorDomaine}">${e.adminNom || "–"}</strong>
+        ${e.domaine ? `· <span style="color:${colorDomaine}">${e.domaine}</span>` : ""}
+        ${e.navigateur ? `· <span style="font-size:10px;color:var(--text3)">${e.navigateur.substring(0,40)}…</span>` : ""}
+      </div>
+    `;
+    listEl.appendChild(div);
+  });
+}
+
+// ─── ALERTES RETARD ───
+
+async function envoyerAlertesRetard() {
+  if (!currentAdmin) { showToast("⚠ Connectez-vous d'abord"); openLogin(); return; }
+
+  // Compter les retards localement pour confirmation
+  const maintenant = new Date();
+  maintenant.setHours(0,0,0,0);
+  const enRetard = DEMANDES.filter(d => {
+    if (!d.retour) return false;
+    const dr = new Date(d.retour);
+    dr.setHours(0,0,0,0);
+    return dr < maintenant;
+  });
+
+  if (enRetard.length === 0) {
+    showToast("✅ Aucune demande en retard actuellement"); return;
+  }
+
+  if (!confirm(`📧 Envoyer une alerte email pour ${enRetard.length} demande(s) en retard ?\n\nLes administrateurs concernés recevront un récapitulatif.`)) return;
+
+  showToast("📧 Envoi en cours…", 3000);
+
+  const res = await sendToSheet("sendAlertes", {});
+  if (res && res.ok) {
+    showToast("✅ Alertes envoyées : " + (res.message || ""));
+    journaliser("ALERTES RETARD", "Alertes de retard envoyées par email");
+  } else if (res && res.warn) {
+    showToast("⚠ " + res.warn, 4000);
+  } else {
+    showToast("⚠ Emails non configurés — alertes non envoyées", 4000);
+  }
+}
+
+// ─── GESTION DU CATALOGUE ───
+
+let editingRef = null; // référence en cours d'édition
+
+function openManageStock() {
+  if (!currentAdmin) { showToast("⚠ Connectez-vous d'abord"); openLogin(); return; }
+  switchManageTab("add");
+  document.getElementById("modal-manage-stock").classList.remove("hidden");
+}
+
+function closeManageStock() {
+  document.getElementById("modal-manage-stock").classList.add("hidden");
+  cancelEdit();
+}
+
+function switchManageTab(tab) {
+  ["add","edit","del","users"].forEach(t => {
+    document.getElementById("smt-" + t).classList.remove("active");
+    document.getElementById("panel-" + t).classList.remove("active");
+  });
+  document.getElementById("smt-" + tab).classList.add("active");
+  document.getElementById("panel-" + tab).classList.add("active");
+  if (tab === "edit")  refreshManageList("edit");
+  if (tab === "del")   refreshManageList("del");
+  if (tab === "users") refreshUsersList();
+}
+
+// ── Construire la liste de références pour Modifier ou Supprimer ──
+function refreshManageList(mode) {
+  const filterDomaine = document.getElementById(mode + "-filter-domaine").value;
+  const listEl = document.getElementById(mode + "-ref-list");
+  listEl.innerHTML = "";
+
+  const keys = filterDomaine ? [filterDomaine] : ["SON","LUMIERE","VIDEO"];
+  keys.forEach(key => {
+    const domLabel = key === "SON" ? "Son" : key === "LUMIERE" ? "Lumière" : "Vidéo";
+    const colorClass = key === "SON" ? "son" : key === "LUMIERE" ? "lum" : "vid";
+
+    (STOCK[key] || []).forEach(item => {
+      const div = document.createElement("div");
+      div.className = "ref-manage-item";
+      div.innerHTML = `
+        <div class="rmi-body">
+          <div class="rmi-ref">
+            <span class="dot dot-${colorClass}" style="display:inline-block;vertical-align:middle;margin-right:4px"></span>
+            ${item.ref}
+            <span class="chip" style="margin-left:6px">${item.qteDispo}/${item.qte}</span>
+          </div>
+          <div class="rmi-desc">${item.desc}</div>
+        </div>
+        <div class="rmi-actions">
+          ${mode === "edit"
+            ? `<button class="btn-edit" onclick="startEdit('${item.ref}','${key}')">✏️ Modifier</button>`
+            : `<button class="btn-del"  onclick="confirmDelete('${item.ref}','${key}')">🗑 Suppr.</button>`
+          }
+        </div>`;
+      listEl.appendChild(div);
+    });
+  });
+
+  if (listEl.children.length === 0) {
+    listEl.innerHTML = `<div style="font-size:12px;color:var(--text3);padding:8px">Aucune référence dans ce domaine</div>`;
+  }
+}
+
+// ── AJOUTER une référence ──
+async function addReference() {
+  const domaine  = document.getElementById("new-domaine").value;
+  const ref      = document.getElementById("new-ref").value.trim().toUpperCase();
+  const desc     = document.getElementById("new-desc").value.trim();
+  const qte      = parseInt(document.getElementById("new-qte").value) || 1;
+  const qteDispo = parseInt(document.getElementById("new-qtedispo").value) || qte;
+
+  if (!ref)  { showToast("⚠ Entrez un code référence"); return; }
+  if (!desc) { showToast("⚠ Entrez un descriptif");     return; }
+
+  // Vérifier doublon
+  const alreadyExists = Object.values(STOCK).flat().find(i => i.ref === ref);
+  if (alreadyExists) { showToast("⚠ Cette référence existe déjà"); return; }
+
+  // Ajouter localement
+  STOCK[domaine].push({ ref, desc, qte, qteDispo: Math.min(qteDispo, qte) });
+
+  // Envoyer vers Google Sheets
+  const res = await sendToSheet("addRef", { ref, domaine, desc, qte, qteDispo: Math.min(qteDispo, qte) });
+  showToast(res?.ok ? "✅ Référence ajoutée" : "✅ Ajoutée localement (hors ligne)");
+  journaliser("STOCK — AJOUT", "Référence ajoutée : " + ref + " — " + desc);
+
+  // Réinitialiser le formulaire
+  document.getElementById("new-ref").value  = "";
+  document.getElementById("new-desc").value = "";
+  document.getElementById("new-qte").value  = "1";
+  document.getElementById("new-qtedispo").value = "1";
+
+  // Rafraîchir la liste stock visible
+  refreshStockList();
+  refreshManageList("edit");
+}
+
+// ── MODIFIER une référence — ouvrir le formulaire ──
+function startEdit(ref, key) {
+  const item = STOCK[key].find(i => i.ref === ref);
+  if (!item) return;
+  editingRef = { ref, key };
+  cancelEdit(); // fermer tout formulaire précédent
+
+  document.getElementById("edit-form-ref").textContent = ref;
+  document.getElementById("edit-desc").value    = item.desc;
+  document.getElementById("edit-qte").value     = item.qte;
+  document.getElementById("edit-qtedispo").value = item.qteDispo;
+  document.getElementById("edit-form").style.display = "block";
+
+  // Faire défiler jusqu'au formulaire
+  document.getElementById("edit-form").scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function cancelEdit() {
+  editingRef = null;
+  const form = document.getElementById("edit-form");
+  if (form) form.style.display = "none";
+}
+
+async function saveEdit() {
+  if (!editingRef) return;
+  const { ref, key } = editingRef;
+  const item = STOCK[key].find(i => i.ref === ref);
+  if (!item) return;
+
+  const newDesc     = document.getElementById("edit-desc").value.trim();
+  const newQte      = parseInt(document.getElementById("edit-qte").value) || 1;
+  const newQteDispo = Math.min(parseInt(document.getElementById("edit-qtedispo").value) || 0, newQte);
+
+  if (!newDesc) { showToast("⚠ Le descriptif ne peut pas être vide"); return; }
+
+  // Mettre à jour localement
+  item.desc     = newDesc;
+  item.qte      = newQte;
+  item.qteDispo = newQteDispo;
+
+  // Envoyer vers Google Sheets
+  const res = await sendToSheet("updateRef", { ref, domaine: key, desc: newDesc, qte: newQte, qteDispo: newQteDispo });
+  showToast(res?.ok ? "✅ Référence modifiée" : "✅ Modifiée localement (hors ligne)");
+  journaliser("STOCK — MODIF", "Référence modifiée : " + ref);
+
+  cancelEdit();
+  refreshStockList();
+  refreshManageList("edit");
+}
+
+// ── SUPPRIMER une référence ──
+async function confirmDelete(ref, key) {
+  // Vérifier si la référence est dans une demande en cours
+  const enCours = DEMANDES.some(d => (d.lignes||[]).some(l => l.ref === ref));
+  if (enCours) {
+    showToast("⚠ Impossible : référence utilisée dans une demande en cours");
+    return;
+  }
+
+  if (!confirm(`Supprimer définitivement "${ref}" du catalogue ?\n\nCette action est irréversible.`)) return;
+
+  // Supprimer localement
+  STOCK[key] = STOCK[key].filter(i => i.ref !== ref);
+
+  // Envoyer vers Google Sheets
+  const res = await sendToSheet("deleteRef", { ref, domaine: key });
+  showToast(res?.ok ? "🗑 Référence supprimée" : "🗑 Supprimée localement (hors ligne)");
+  journaliser("STOCK — SUPPRESSION", "Référence supprimée : " + ref);
+
+  refreshStockList();
+  refreshManageList("del");
+}
+
+// ─── BON DE RETOUR ───
+function buildRetourHTML({ d, retournes, manquants, note }) {
+  const lignesHTML = retournes.map(l => `
+    <tr>
+      <td><strong>${l.ref}</strong></td>
+      <td>${l.desc || ""}</td>
+      <td style="text-align:center;font-weight:700;color:#2AA87E">×${l.qteDemandee}</td>
+      <td style="text-align:center"><span style="background:#E3F5EF;color:#2AA87E;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">✅ Retourné</span></td>
+    </tr>`).join("");
+
+  const manquantsHTML = manquants.length > 0 ? `
+    <h3 style="color:#D94040;margin-top:20px;font-size:13px">⚠ Références non retournées</h3>
+    <table style="width:100%;border-collapse:collapse;margin-top:6px">
+      <thead><tr>
+        <th style="background:#D94040;color:#fff;padding:6px 8px;text-align:left;font-size:11px">Référence</th>
+        <th style="background:#D94040;color:#fff;padding:6px 8px;text-align:left;font-size:11px">Descriptif</th>
+        <th style="background:#D94040;color:#fff;padding:6px 8px;text-align:center;font-size:11px">Quantité</th>
+        <th style="background:#D94040;color:#fff;padding:6px 8px;text-align:center;font-size:11px">Statut</th>
+      </tr></thead>
+      <tbody>${manquants.map(l => `
+        <tr>
+          <td style="padding:5px 8px;border-bottom:1px solid #eee"><strong>${l.ref}</strong></td>
+          <td style="padding:5px 8px;border-bottom:1px solid #eee">${l.desc || ""}</td>
+          <td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:center;font-weight:700">×${l.qteDemandee}</td>
+          <td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:center">
+            <span style="background:#FEECEC;color:#D94040;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">❌ Manquant</span>
+          </td>
+        </tr>`).join("")}
+      </tbody>
+    </table>` : "";
+
+  const noteHTML = note
+    ? `<div style="margin-top:16px;padding:10px 14px;background:#FDF3E3;border-left:3px solid #E8A020;border-radius:4px;font-size:12px"><strong>Note :</strong> ${note}</div>`
+    : "";
+
+  return `<html><head><meta charset="UTF-8"><title>Bon de retour DNMADE</title>
+  <style>
+    body{font-family:'Segoe UI',sans-serif;font-size:13px;padding:24px;max-width:700px;margin:0 auto;color:#1A1D23}
+    .header{text-align:center;border-bottom:3px solid #2AA87E;padding-bottom:16px;margin-bottom:20px}
+    .header h2{font-size:20px;font-weight:800;color:#2AA87E}
+    .header p{font-size:11px;color:#666;margin-top:4px}
+    .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;background:#F7F8FA;padding:14px;border-radius:8px}
+    .info-grid dt{font-size:10px;font-weight:700;color:#888;text-transform:uppercase;margin-bottom:2px}
+    .info-grid dd{font-size:13px;font-weight:600}
+    table{width:100%;border-collapse:collapse}
+    th{background:#2AA87E;color:#fff;padding:8px 10px;text-align:left;font-size:12px}
+    td{padding:7px 10px;border-bottom:1px solid #EEF1F7;font-size:12px}
+    tr:nth-child(even) td{background:#F7F8FA}
+    .sig{margin-top:30px;display:grid;grid-template-columns:1fr 1fr;gap:20px}
+    .sig-box{border-top:1px solid #ccc;padding-top:8px;font-size:11px;color:#666}
+    .footer{margin-top:24px;font-size:10px;color:#999;text-align:center;border-top:1px solid #eee;padding-top:12px}
+  </style></head><body>
+  <div class="header">
+    <div style="font-size:28px">📦</div>
+    <h2>BON DE RETOUR DE MATÉRIEL</h2>
+    <p>DNMADE Daunot · Gestionnaire des stocks</p>
+  </div>
+  <dl class="info-grid">
+    <div><dt>Utilisateur</dt><dd>${d.utilisateur}</dd></div>
+    <div><dt>Projet</dt><dd>${d.projet}</dd></div>
+    <div><dt>Domaine</dt><dd>${d.domaine}</dd></div>
+    <div><dt>Date de sortie</dt><dd>${fmtDate(d.sortie)}</dd></div>
+    <div><dt>Retour prévu</dt><dd>${fmtDate(d.retour)}</dd></div>
+    <div><dt>Retour effectif</dt><dd>${fmtDate(today())}</dd></div>
+    <div><dt>Administrateur</dt><dd>${currentAdmin ? currentAdmin.nom : "–"}</dd></div>
+    <div><dt>Articles retournés</dt><dd style="color:#2AA87E">${retournes.length} / ${retournes.length + manquants.length}</dd></div>
+  </dl>
+  <h3 style="font-size:13px;margin-bottom:8px;color:#2AA87E">✅ Références retournées</h3>
+  <table>
+    <thead><tr>
+      <th>Référence</th><th>Descriptif</th><th style="text-align:center">Quantité</th><th style="text-align:center">Statut</th>
+    </tr></thead>
+    <tbody>${lignesHTML}</tbody>
+  </table>
+  ${manquantsHTML}
+  ${noteHTML}
+  <div class="sig">
+    <div class="sig-box">Signature utilisateur<br><br><br></div>
+    <div class="sig-box">Visa administrateur<br><br><br></div>
+  </div>
+  <div class="footer">DNMADE Daunot · Retour validé le ${fmtNow()}</div>
+  <script>window.onload=()=>{window.print();}<\/script>
+  </body></html>`;
+}
+
+// ════════════════════════════════════════════════════════════
+// AUTHENTIFICATION & GESTION DE SESSION
+// ════════════════════════════════════════════════════════════
+
+// Configuration d'authentification
+const AUTH_CONFIG = {
+  SESSION_TIMEOUT: 15 * 60 * 1000, // 15 minutes en ms
+  TOKEN_KEY: "dnmade_auth_token",
+  USER_KEY: "dnmade_auth_user",
+  LAST_ACTIVITY_KEY: "dnmade_last_activity"
+};
+
+let currentUser = null;
+let inactivityTimer = null;
+let utilisateursList = [];
+
+// Initialiser l'authentification au chargement
+window.addEventListener("DOMContentLoaded", function() {
+  checkAuthState();
+  loadUsersList();
+  setupInactivityDetection();
+});
+
+// Vérifier l'état d'authentification
+async function checkAuthState() {
+  const token = localStorage.getItem(AUTH_CONFIG.TOKEN_KEY);
+  const user = localStorage.getItem(AUTH_CONFIG.USER_KEY);
+  
+  if (token && user) {
+    currentUser = user;
+    showApp();
+    updateHeaderUsername();
+  } else {
+    showAuthScreen();
+  }
+}
+
+// Charger la liste des utilisateurs
+async function loadUsersList() {
+  try {
+    const res = await sendToSheet("getUtilisateurs", {});
+    if (res.ok && res.data) {
+      utilisateursList = res.data;
+      populateLoginSelect();
+    }
+  } catch(err) {
+    console.error("Erreur chargement utilisateurs:", err);
+  }
+}
+
+// Remplir le select de connexion
+function populateLoginSelect() {
+  const select = document.getElementById("login-username");
+  select.innerHTML = '<option value="">Sélectionner un utilisateur...</option>';
+  utilisateursList.forEach(user => {
+    const option = document.createElement("option");
+    option.value = user;
+    option.textContent = user;
+    select.appendChild(option);
+  });
+}
+
+// Basculer entre les onglets d'authentification
+function switchAuthTab(tab) {
+  const loginTab = document.getElementById("form-login");
+  const registerTab = document.getElementById("form-register");
+  const loginBtn = document.querySelectorAll(".auth-tab-btn")[0];
+  const registerBtn = document.querySelectorAll(".auth-tab-btn")[1];
+  
+  if (tab === "login") {
+    loginTab.classList.add("active");
+    registerTab.classList.remove("active");
+    loginBtn.classList.add("active");
+    registerBtn.classList.remove("active");
+  } else {
+    registerTab.classList.add("active");
+    loginTab.classList.remove("active");
+    registerBtn.classList.add("active");
+    loginBtn.classList.remove("active");
+  }
+}
+
+// Soumettre le formulaire de connexion
+async function submitLogin(event) {
+  event.preventDefault();
+  
+  const username = document.getElementById("login-username").value.trim();
+  const password = document.getElementById("login-password").value;
+  const msgDiv = document.getElementById("login-message");
+  
+  if (!username || !password) {
+    showAuthMessage("login-message", "Veuillez remplir tous les champs", "error");
+    return;
+  }
+  
+  try {
+    const res = await sendToSheet("loginUtilisateur", {
+      nom: username,
+      password: password,
+      navigateur: navigator.userAgent
+    });
+    
+    if (res.ok) {
+      currentUser = username;
+      localStorage.setItem(AUTH_CONFIG.TOKEN_KEY, "token_" + Date.now());
+      localStorage.setItem(AUTH_CONFIG.USER_KEY, username);
+      localStorage.setItem(AUTH_CONFIG.LAST_ACTIVITY_KEY, Date.now());
+      
+      showApp();
+      updateHeaderUsername();
+      resetLoginForm();
+    } else {
+      showAuthMessage("login-message", res.err || "Erreur de connexion", "error");
+    }
+  } catch(err) {
+    showAuthMessage("login-message", "Erreur serveur: " + err.message, "error");
+  }
+}
+
+// Soumettre le formulaire d'inscription
+async function submitRegister(event) {
+  event.preventDefault();
+  
+  const username = document.getElementById("register-username").value.trim();
+  const email = document.getElementById("register-email").value.trim();
+  const password = document.getElementById("register-password").value;
+  const confirm = document.getElementById("register-confirm").value;
+  const msgDiv = document.getElementById("register-message");
+  
+  if (!username || !password) {
+    showAuthMessage("register-message", "Veuillez remplir les champs obligatoires", "error");
+    return;
+  }
+  
+  if (password !== confirm) {
+    showAuthMessage("register-message", "Les mots de passe ne correspondent pas", "error");
+    return;
+  }
+  
+  try {
+    const res = await sendToSheet("registerUtilisateur", {
+      nom: username,
+      email: email || "",
+      password: password,
+      navigateur: navigator.userAgent
+    });
+    
+    if (res.ok) {
+      showAuthMessage("register-message", "Inscription réussie ! Connectez-vous maintenant.", "success");
+      resetRegisterForm();
+      setTimeout(() => {
+        utilisateursList.push(username);
+        populateLoginSelect();
+        switchAuthTab("login");
+      }, 1500);
+    } else {
+      showAuthMessage("register-message", res.err || "Erreur d'inscription", "error");
+    }
+  } catch(err) {
+    showAuthMessage("register-message", "Erreur serveur: " + err.message, "error");
+  }
+}
+
+// Vérifier la force du mot de passe en temps réel
+async function checkPasswordStrength() {
+  const password = document.getElementById("register-password").value;
+  
+  if (!password) {
+    document.getElementById("strength-fill").className = "strength-fill";
+    resetCriteria();
+    return;
+  }
+  
+  try {
+    const res = await sendToSheet("validatePasswordStrength", {
+      password: password
+    });
+    
+    const criteria = res.criteria || {};
+    const force = res.force || 0;
+    
+    // Mettre à jour les critères visuels
+    updateCriteria("crit-length", criteria.minLength);
+    updateCriteria("crit-upper", criteria.uppercase);
+    updateCriteria("crit-lower", criteria.lowercase);
+    updateCriteria("crit-number", criteria.number);
+    updateCriteria("crit-special", criteria.special);
+    
+    // Mettre à jour la barre de force
+    const fill = document.getElementById("strength-fill");
+    const strengthClass = force <= 1 ? "weak" : force === 2 ? "fair" : force === 3 ? "good" : force === 4 ? "strong" : "verystrong";
+    fill.className = "strength-fill " + strengthClass;
+    
+    // Activer/désactiver le bouton d'inscription
+    const submitBtn = document.getElementById("btn-register-submit");
+    submitBtn.disabled = force < 5;
+    
+  } catch(err) {
+    console.error("Erreur validation:", err);
+  }
+}
+
+// Mettre à jour l'affichage d'un critère
+function updateCriteria(elementId, met) {
+  const element = document.getElementById(elementId);
+  const icon = element.querySelector(".criteria-icon");
+  
+  if (met) {
+    element.classList.add("met");
+    icon.textContent = "✓";
+  } else {
+    element.classList.remove("met");
+    icon.textContent = "○";
+  }
+}
+
+// Réinitialiser les critères
+function resetCriteria() {
+  ["crit-length", "crit-upper", "crit-lower", "crit-number", "crit-special"].forEach(id => {
+    updateCriteria(id, false);
+  });
+}
+
+// Afficher un message d'authentification
+function showAuthMessage(elementId, message, type) {
+  const msgDiv = document.getElementById(elementId);
+  msgDiv.textContent = message;
+  msgDiv.className = "auth-message " + type;
+  
+  if (type === "success") {
+    setTimeout(() => {
+      msgDiv.className = "auth-message";
+    }, 3000);
+  }
+}
+
+// Réinitialiser le formulaire de connexion
+function resetLoginForm() {
+  document.getElementById("form-login").reset();
+  document.getElementById("login-message").className = "auth-message";
+}
+
+// Réinitialiser le formulaire d'inscription
+function resetRegisterForm() {
+  document.getElementById("form-register").reset();
+  document.getElementById("register-message").className = "auth-message";
+  document.getElementById("strength-fill").className = "strength-fill";
+  resetCriteria();
+}
+
+// Afficher l'écran d'authentification
+function showAuthScreen() {
+  document.getElementById("auth-screen").classList.add("active");
+  document.getElementById("app").style.display = "none";
+}
+
+// Afficher l'application
+function showApp() {
+  document.getElementById("auth-screen").classList.remove("active");
+  document.getElementById("app").style.display = "flex";
+  // Charger les données après affichage
+  setTimeout(() => {
+    loadUtilisateursFromSheet();
+    loadDemands();
+  }, 100);
+}
+
+// Mettre à jour le nom d'utilisateur dans le header
+function updateHeaderUsername() {
+  document.getElementById("header-username").textContent = "👤 " + currentUser;
+}
+
+// Afficher le modal de changement de mot de passe
+function showChangePasswordModal() {
+  const newPwd = prompt("Nouveau mot de passe (8+ car, majuscule, minuscule, chiffre, symbole):");
+  if (!newPwd) return;
+  
+  const confirm = prompt("Confirmer le mot de passe:");
+  if (newPwd !== confirm) {
+    showToast("⚠ Les mots de passe ne correspondent pas");
+    return;
+  }
+  
+  const oldPwd = prompt("Ancien mot de passe:");
+  if (!oldPwd) return;
+  
+  changeUserPassword(oldPwd, newPwd);
+}
+
+// Changer le mot de passe utilisateur
+async function changeUserPassword(oldPwd, newPwd) {
+  try {
+    const res = await sendToSheet("changePasswordUser", {
+      nom: currentUser,
+      ancienMdp: oldPwd,
+      nouveauMdp: newPwd,
+      navigateur: navigator.userAgent
+    });
+    
+    if (res.ok) {
+      showToast("✅ Mot de passe changé avec succès");
+    } else {
+      showToast("⚠ " + res.err);
+    }
+  } catch(err) {
+    showToast("❌ Erreur: " + err.message);
+  }
+}
+
+// Déconnecter l'utilisateur
+function logoutUser() {
+  if (!confirm("Êtes-vous sûr de vouloir vous déconnecter ?")) return;
+  
+  currentUser = null;
+  localStorage.removeItem(AUTH_CONFIG.TOKEN_KEY);
+  localStorage.removeItem(AUTH_CONFIG.USER_KEY);
+  localStorage.removeItem(AUTH_CONFIG.LAST_ACTIVITY_KEY);
+  
+  if (inactivityTimer) clearTimeout(inactivityTimer);
+  
+  showAuthScreen();
+  resetLoginForm();
+  resetRegisterForm();
+}
+
+// Détecter l'inactivité
+function setupInactivityDetection() {
+  document.addEventListener("click", resetInactivityTimer);
+  document.addEventListener("keypress", resetInactivityTimer);
+  document.addEventListener("mousemove", resetInactivityTimer);
+}
+
+function resetInactivityTimer() {
+  if (!currentUser) return;
+  
+  localStorage.setItem(AUTH_CONFIG.LAST_ACTIVITY_KEY, Date.now());
+  
+  if (inactivityTimer) clearTimeout(inactivityTimer);
+  
+  inactivityTimer = setTimeout(() => {
+    if (currentUser) {
+      showToast("⏱ Session expirée par inactivité");
+      logoutUser();
+    }
+  }, AUTH_CONFIG.SESSION_TIMEOUT);
+}
+
+function printInNewWindow(html) {
+  const win = window.open("", "_blank", "width=800,height=900");
+  win.document.write(html);
+  win.document.close();
+}
+</script>
+</body>
+</html>
